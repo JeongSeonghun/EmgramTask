@@ -15,9 +15,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".OSInfoActivity" />
-        <activity android:name=".MemInfoActivity" />
-        <activity android:name=".CPUInfoActivity"></activity>
     </application>
 
 </manifest>
