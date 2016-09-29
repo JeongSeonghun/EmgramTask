@@ -1,30 +1,46 @@
 package wgl.example.com.emtask1;
 
-/**
- * Created by EMGRAM on 2016-09-06.
- */
+
 public class Inform {
-    String name;
-    String val;
-    public Inform(String name, String val){
-        this.name=name;
-        this.val=val;
+    String key;
+    String value;
+
+    public Inform(){
+
+    }
+    public Inform(String key, String value){
+        this.key= key;
+        this.value= value;
     }
 
-    public String getNam(){
-        return name;
+    // key, value 동시 변경용
+    public void setInfo(String key, String value){
+        this.key= key;
+        this.value= value;
     }
 
-    public String getVal(){
-        return val;
+    // key 변경용
+    public void setKey(String key){
+        this.key= key;
     }
 
-    public void setNam(String name){
-        this.name=name;
+    // value 변경용
+    public void setValue(String value){
+        this.value= value;
     }
 
-    public void setVal(String val){
-        this.val=val;
+    // key 출력
+    public String getKey(){
+        return key;
     }
 
+    // value 출력
+    public String getValue(){
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return "Inform{key='"+key+"', value='"+value+"'}";
+    }
 }

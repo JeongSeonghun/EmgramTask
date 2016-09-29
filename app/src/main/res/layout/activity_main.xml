@@ -15,11 +15,36 @@
         android:text="시스템 정보"
         android:id="@+id/textView" />
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/textView"
+        android:layout_alignParentStart="true"
+        android:id="@+id/linearLayout">
+
+        <Spinner
+            android:layout_width="130dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/keyspin" />
+
+        <EditText
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/s_text" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Search"
+            android:id="@+id/s_bt" />
+    </LinearLayout>
+
     <ListView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/infoList"
-        android:layout_below="@+id/textView"
+        android:layout_below="@+id/linearLayout"
         android:layout_alignParentStart="true" />
 
 </RelativeLayout>

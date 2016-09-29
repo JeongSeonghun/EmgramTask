@@ -11,7 +11,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,36 +33,93 @@ import java.util.ArrayList;
 //한줄로 같이 나오는 명칭과 값 문자열을 나누는 부분 추가 (153)
 
 public class MainActivity extends AppCompatActivity {
-    //private ArrayList<String> list; //대신에 String 배열로 사용
-    private ArrayAdapter<String> adapter;
-    ListView listv;
-    ArrayList al= new ArrayList();
 
-    String[] str={"OS 정보", "Memory 정보", "CPU 정보"};//리스트뷰 리스트
+    ListView list;
+    Spinner spinner;
+    Button searchBt;
+    EditText searchText;
+    InfoAdapter adapter;
+    ArrayList<Inform> al= new ArrayList<Inform>();// 리스트뷰용
+
+    ArrayAdapter adapter_sp; //스피너용
+    String[] sp_list={"Key", "Value"}; //스피너 리스트
+
+    ArrayList<Inform> tempal= new ArrayList<Inform>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        listv= (ListView)findViewById(R.id.infoList);
+        list= (ListView)findViewById(R.id.infoList);
+        spinner= (Spinner)findViewById(R.id.keyspin);
+        searchBt= (Button)findViewById(R.id.s_bt);
+        searchText= (EditText)findViewById(R.id.s_text);
 
+        //arraylist al에 os, memory, cpu정보 추가
         AddSysInfo(al);
         ReadMemInfo(al);
         ReadCPUinfo(al);
 
-        //list.setAdapter(new InfoAdapter(getApplicationContext(), R.layout.info_list, al));
-        InfoAdapter adapter = new InfoAdapter(getApplicationContext(), R.layout.info_list, al);
-        listv.setAdapter(adapter);
+        adapter = new InfoAdapter(getApplicationContext(), R.layout.list_item, al);
+        list.setAdapter(adapter);
 
-        /*클릭 이벤트
-        AdapterView.OnItemClickListener m=new AdapterView.OnItemClickListener(){
+        //adapter.notifyDataSetChanged();
+
+        //스피너관련
+        adapter_sp=new ArrayAdapter(this, android.R.layout.simple_spinner_item, sp_list);//환경, 스피너 항목 레이아웃, 리스트
+        adapter_sp.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);//펼처진 상태 레이아웃(배경)
+
+        spinner.setAdapter(adapter_sp);
+
+        /* 선택시 호출되는 메서드
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             @Override
-            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3){
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
+        });
+        */
+
+        ///*
+        //search 버튼 클릭시, 어댑터 새로 설정(list 따로 저장 연결)
+        searchBt.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                String sel, sech;
+                System.out.println("test2: "+al.size());
+                //spinner, editText의 값을 가져옴
+                sel=spinner.getSelectedItem().toString();
+                sech=searchText.getText().toString();
+                ArrayList<Inform> s_al= new ArrayList<Inform>();
+
+                //spinner 구분에 따른 조건 변경
+                for(int i=0; i<al.size(); i++){
+                    String str;
+                    switch(sel){
+                        case "Key": //key 명칭을 확인 후 리스트 추가
+                            str=al.get(i).getKey();
+                            str=str.toLowerCase();  //대소문자 관계 없이 검색하기 위해서
+                            //전체 리스트인 al에서 key값들 안에서 editText 검색 내용 포함을 확인 후 저장
+                            if(str.contains(sech.toLowerCase()))
+                                s_al.add(al.get(i));
+                            break;
+                        case "Value":   //value 값을 확인 후 리스트 추가
+                            str=al.get(i).getValue();
+                            str=str.toLowerCase();
+                            if(str.contains(sech.toLowerCase()))
+                                s_al.add(al.get(i));
+                            break;
+                    }
+                }
+                list.setAdapter(new InfoAdapter(getApplicationContext(), R.layout.list_item, s_al));
 
             }
-        };
-        list.setOnItemClickListener(m);
-        */
+        });
+        //*/
+
 
     }
 //시스템 정보 출력(os)
@@ -67,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
     //텍스트뷰에 출력할 text로 만듬
 
     //private String ReadSYSinfo() 변경
-    private void AddSysInfo(ArrayList<String> al)
+    private void AddSysInfo(ArrayList<Inform> al)
     {
         /*
         os.arch os아키텍처
@@ -76,28 +136,29 @@ public class MainActivity extends AppCompatActivity {
         line.separator 형구분자
          */
 
-        al.add(getProInfo("OS Name", "os.name"));   //OS 이름
-        al.add(getProInfo("OS Version", "os.version")); //OS 버전
+        // value값을 구할 property값과 key명칭 배열
+        String[] key={"OS Name", "OS Version", "JAVA Vendor URL", "JAVA Version", "JAVA Class Path",
+                "JAVA Class Version", "JAVA Vendor", "JAVA Install dir", "User Name",
+                "User Home dir", "Current dir"};
+        String[] value={"os.name", "os.version", "java.vendor.url", "java.version", "java.class.patt",
+                "java.class.version", "java.vendor", "java.home", "user.name",
+                "user.home", "user.dir"};
+        //OS 이름, OS 버전, 자바 공급자 URL, 자바 버전, 자바 클래스 경로, 자바 클래스 버전, 자바 공급자
+        //자바 설치 디렉토리, 사용자 계정, 사용자 홈 디렉토리, 현제 디렉토리
 
-        al.add(getProInfo("JAVA Vendor URL", "java.vendor.url"));   //자바 공급자 URL
-        al.add(getProInfo("JAVA Version", "java.version")); //자바 버전
-        al.add(getProInfo("JAVA Class Path", "java.class.path"));   //자바 클래스 경로
-        al.add(getProInfo("JAVA Class Version", "java.class.version")); //자바 클래스 버전
-        al.add(getProInfo("JAVA Vendor", "java.vendor"));   //자바 공급자
-        al.add(getProInfo("JAVA Install dir", "java.home"));    //자바 설치 디렉토리
-
-        al.add(getProInfo("User Name", "user.name"));   //사용자 계정
-        al.add(getProInfo("User Home dir", "user.home"));   //사용자 홈 디렉토리
-        al.add(getProInfo("Current dir", "user.dir"));  //현제 디렉토리
+        for(int i=0;i<key.length;i++){
+            Inform info= new Inform();
+            info.setInfo(key[i], getProInfo(value[i]));
+            al.add(info);
+        }
 
     }
 
     //System.getProperty() 사용
     //private void getProperty(String desc, String property, StringBuffer tBuffer) 변경
-    //정보 명칭 : 값 문자열 형태로
-    private String getProInfo(String name, String property){
+    private String getProInfo(String property){
         String str;
-        str=name+" : "+String.valueOf(System.getProperty(property));
+        str=String.valueOf(System.getProperty(property));
 
         return str;
     }
@@ -116,17 +177,11 @@ public class MainActivity extends AppCompatActivity {
         ActivityManager.MemoryInfo mInfo = new ActivityManager.MemoryInfo ();
         actvityManager.getMemoryInfo( mInfo );// memory정보 mInfo에 저장
 
-        /*
-        strMemory.append("Available Memory : ");
-        strMemory.append(mInfo.availMem);//availMem: 사용가능, totalMem: 전체
-        strMemory.append("\n");
-        strMemory.append("\n");
-        */
-
         String result=strMemory.toString();
 
 
-        al.add("Available Memory : "+mInfo.availMem);   //이용가능 메모리
+        Inform info= new Inform();
+        info.setInfo("Available Memory", String.valueOf(mInfo.availMem));
 
         try{
             String[] args = {"/system/bin/cat", "/proc/meminfo"};
@@ -145,29 +200,27 @@ public class MainActivity extends AppCompatActivity {
             // 한 줄씩 읽어서 arraylist에 저장
             // BufferedReader, InputStreamReader 사용
             BufferedReader bufferedReader= new BufferedReader(new InputStreamReader(in,"EUC_KR"));
-            while(true){
-                String string= bufferedReader.readLine();//한줄씩 읽어들임
+            while(true) {
+                String string = bufferedReader.readLine();//한줄씩 읽어들임
 
-                if(string != null){
+                if (string != null) {
+                    //":"기준으로 명칭과 값 나눔
+                    String keystr, valstr;
+                    int dnum;   //":" 구분할 위치
+                    dnum = string.indexOf(":");
+                    System.out.println("test: " + string);
+
+                    if (!string.isEmpty()) { //빈 문자열 저장 방지
+                        keystr = string.substring(0, dnum);
+                        valstr = string.substring(dnum + 1, string.length());
+                        info.setInfo(keystr, valstr.trim());
+                        al.add(info);
+                    }
                     al.add(string);
-                }else{
+                } else {
                     break;
                 }
-
-                //추가 : 기준으로 명칭과 값 나눔
-                String stname, stval;
-                int dnum;   //":" 구분할 위치
-                dnum=string.indexOf(":");
-                //System.out.println("division string: "+string);
-                //System.out.println("division num: "+dnum);
-                if(!string.isEmpty()) { //비었을 때 오류 방지
-                    //System.out.println("division front string: " + string.substring(0, dnum - 1));
-                    //System.out.println("division behind string: " + string.substring(dnum+1, string.length()));
-                    stname=string.substring(0, dnum - 1);
-                    stval=string.substring(dnum+1, string.length());
-                }
             }
-
             in.close();
         } catch(IOException ex){
             ex.printStackTrace();
@@ -189,10 +242,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     //cpu 정보
-    private String ReadCPUinfo(ArrayList al)
+    private void ReadCPUinfo(ArrayList al)
     {
         ProcessBuilder cmd;
-        String result="";
+        Inform info;
 
         try{
             String[] args = {"/system/bin/cat", "/proc/cpuinfo"};
@@ -200,96 +253,35 @@ public class MainActivity extends AppCompatActivity {
 
             Process process = cmd.start();
             InputStream in = process.getInputStream();
-            /*
-            byte[] re = new byte[1024];
-            while(in.read(re) != -1){
-                System.out.println(new String(re));
-                result = result + new String(re);
-            }
-            */
 
             BufferedReader bufferedReader= new BufferedReader(new InputStreamReader(in,"EUC_KR"));
 
             while(true){
                 String string= bufferedReader.readLine();
 
+                info= new Inform();
                 if(string != null){
-                    al.add(string);
+                    //":"기준으로 명칭과 값 나눔
+                    String keystr, valstr;
+                    int dnum;   //":" 구분할 위치
+                    dnum=string.indexOf(":");
+
+                    if(!string.isEmpty()) {
+                        keystr=string.substring(0, dnum - 1);
+                        valstr=string.substring(dnum+1, string.length());
+                        info.setInfo(keystr, valstr.trim());
+                        al.add(info);
+                    }
                 }else{
                     break;
                 }
-
-                //string.isEmpty()는 빈 문자열을 저장하지 않기 위해 추가(\n만 존제하는 경우)
-                if(string.isEmpty()){
-                    al.remove(al.size()-1);
-                }
-
             }
             in.close();
-
-
 
         } catch(IOException ex){
             ex.printStackTrace();
         }
-        return result;
+
     }
 }
 
-//BaseAdapter 사용 클래스
-//layout은 info_list로 textview 1개로 구성된 layout 제작 사용
-
-class InfoAdapter extends BaseAdapter {
-
-    Context context;
-    int layout;
-    ArrayList al=new ArrayList();
-
-    LayoutInflater inf;// xml에 정의된 자원(resource)들을 view로 반환
-
-    public InfoAdapter(Context context, int layout, ArrayList al){
-        this.context= context;
-        this.layout=layout;
-        this.al=al;
-        this.inf= (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-
-    }
-
-    // 어댑터로 처리될 데이터 개수 반환
-    @Override
-    public int getCount() {
-        return al.size();
-    }
-
-    // 특정 위치 데이터 반환
-    @Override
-    public Object getItem(int i) {
-        return al.get(i);
-    }
-
-    // 특정 위치 데이터 ID 반환
-    @Override
-    public long getItemId(int i) {
-        return i;
-    }
-
-    // 특정 위치의 데이터를 출력할 뷰를 얻음
-    @Override
-    public View getView(int i, View view, ViewGroup viewGroup) {//(해당행 위치, 해당행 레이아웃, 해당행 부모뷰(리스트뷰))
-        if(view==null){//해당하는 행에 레이아웃객체 없을 시
-            //xml파일로 레이아웃 객체 생성
-            view= inf.inflate(layout, null);
-        }
-        TextView sysInfo= (TextView)view.findViewById(R.id.sys_info);//view레이아웃 객체내의 텍스트뷰 id 사용
-
-        sysInfo.setText(al.get(i).toString());
-
-        return view;
-    }
-    /*
-    View inflate( int resource, ViewGroup root ) 현제 사용
-    View inflate( XmlPullParser parser, ViewGroup root )
-    View inflate( XMLPullParser parser, ViewGroup root, boolean attachToRoot )
-    View inflate( int resource, ViewGroup root, boolean attachToRoot )
-    */
-}
