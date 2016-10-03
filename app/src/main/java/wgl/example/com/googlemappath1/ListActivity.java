@@ -159,7 +159,11 @@ public class ListActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if(click_Ck){
                     view.setBackgroundColor(Color.CYAN);
+
+                    TextView tv= (TextView)view.findViewById(R.id.num);
+                    tv.setBackgroundColor(Color.WHITE);
                     System.out.println("test4: "+nodes2.get(i));
+                    System.out.println("test4: "+view.getId());
                     searchVal_s=nodes2.get(i);
                     click_Ck=false;
                 }else{

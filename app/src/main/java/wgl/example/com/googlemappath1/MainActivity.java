@@ -31,6 +31,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener
@@ -46,6 +48,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     RadioButton startR, stopR;
 
     String list_val="";    //intent전달용 json값
+
+    long now;
+    Date date;
+    SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,8 +124,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             DirectionsJSONParser2 parser2= new DirectionsJSONParser2();
             searchPath=parser2.parse(gDirectJo);
 
-            System.out.println("test 002 : "+searchPath.size());
-            //System.out.println("test 002 : "+searchPath.get(0).get(0).get(0).toString());
+            addPolyline2(searchPath);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -244,6 +249,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 poly.addAll(node.get(i).get(j));
                 poly.width(3);
                 poly.color(polColor[rePolyCheck]);
+            }
+        }
+
+        map.addPolyline(poly);
+
+        rePolyCheck+=1;
+
+    }
+
+    public void addPolyline2(Vector<Vector<Vector<LatLng>>> node){
+
+        PolylineOptions poly= new PolylineOptions().geodesic(true);
+
+        //node-> rout:[{legs:[{steps:[{LatLng},...]},...]},...]
+        for(int i=0; i<node.size(); i++){
+            for(int j=0; j<node.get(i).size(); j++){
+                poly.addAll(node.get(i).get(j));
+                poly.width(7);
+                poly.color(Color.BLUE);
             }
         }
 
