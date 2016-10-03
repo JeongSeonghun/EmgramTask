@@ -1,5 +1,6 @@
 package wgl.example.com.googlemappath1;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 //import android.location.Location;
@@ -28,6 +29,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -54,6 +56,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
 
     int rePolyNum=0;
+
+    Button logShow;
+    String logSt, logSp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +93,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Toast.makeText(getApplicationContext(),"Reset버튼을 눌러주세요.", Toast.LENGTH_SHORT).show();
                 }
 
+                now= System.currentTimeMillis();
+                date= new Date(now);
+                String timeLog=sim.format(date);
+                logSt=timeLog+":"+"path Click\n";
             }
         });
 
@@ -120,6 +129,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        logShow= (Button)findViewById(R.id.log_show);
+        logShow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent= new Intent(getApplicationContext(),LogActivity.class);
+                startActivity(intent);
+            }
+        });
+
     }
 
     @Override
@@ -133,6 +151,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             searchPath=parser2.parse(gDirectJo);
 
             addPolyline(searchPath, false);
+
+            now= System.currentTimeMillis();
+            date= new Date(now);
+            String timeLog=sim.format(date);
+            String log="";
+
+            log+=timeLog+":"+"search poly line end\n";
+            saveLog(log);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -214,10 +240,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if(rePolyCheck)  //세가지 경로 중 처음 경로만 저장
                 list_val=gDirectJo.toString();
 
-                if(pathCk(pathCk_s))
+                if(pathCk(pathCk_s)) {
                     addPolyline(nodeVec, true);
-                else
-                    Toast.makeText(getApplicationContext(),"지원되지 않아요!:"+pathCk_s,Toast.LENGTH_SHORT).show();
+                    now= System.currentTimeMillis();
+                    date= new Date(now);
+                    String timeLog=sim.format(date);
+                    String log="";
+
+                    log+=logSt+timeLog+":"+"poly line end\n";
+                    saveLog(log);
+                }else {
+                    Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
+                    now= System.currentTimeMillis();
+                    date= new Date(now);
+                    String timeLog=sim.format(date);
+                    String log="";
+
+                    log+=logSt+timeLog+":"+"poly line end,false\n";
+                    saveLog(log);
+                }
 
             } catch (JSONException e) {
 
@@ -277,6 +318,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapClick(LatLng latLng) {
+        now= System.currentTimeMillis();
+        date= new Date(now);
+        String timeLog=sim.format(date);
+        String log="";
 
         if(startR.isChecked()){   //start 선택시
             if(sMarkAdd){   //start Marker 존제 여부 확인 후 추가
@@ -290,6 +335,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
+            log+=timeLog+":"+"Start Click\n";
+            saveLog(log);
         }
 
         if(stopR.isChecked()){  //stop선택시
@@ -302,7 +349,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 stopMark.setPosition(latLng);
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
+            log+=timeLog+":"+"Stop Click\n";
+            saveLog(log);
         }
 
+    }
+
+    public void saveLog(String log_data){
+        try {
+            // 파일 쓰기
+            //FileOutputStream fos = openFileOutput("text.txt", Context.MODE_PRIVATE);
+            FileOutputStream fos = openFileOutput("log.txt", Context.MODE_APPEND);
+            fos.write(log_data.getBytes());
+            fos.close();
+
+        }catch (Exception e){}
     }
 }

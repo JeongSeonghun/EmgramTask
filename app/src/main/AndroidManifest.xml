@@ -23,6 +23,8 @@
             android:value="AIzaSyCc2PqOCbvrNGtDRwINl4X_tiywxt9TDPA" />
 
         <activity android:name=".ListActivity" />
+        <activity android:name=".LogActivity"></activity>
+
     </application>
 
 </manifest>
