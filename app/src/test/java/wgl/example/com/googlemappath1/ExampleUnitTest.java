@@ -1,4 +1,4 @@
-package wgl.example.com.emtask4;
+package wgl.example.com.googlemappath1;
 
 import org.junit.Test;
 
