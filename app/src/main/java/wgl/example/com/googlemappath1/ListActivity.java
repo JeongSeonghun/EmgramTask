@@ -2,6 +2,7 @@ package wgl.example.com.googlemappath1;
 
 import android.content.Intent;
 import android.graphics.Color;
+import android.location.Location;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -38,6 +39,8 @@ public class ListActivity extends AppCompatActivity {
 
     Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
     Vector<LatLng> nodes2;
+
+    NodeAdapter nodeAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -152,18 +155,19 @@ public class ListActivity extends AppCompatActivity {
             }
         }
         node.setText(String.valueOf(nodes2.size()));
-        list.setAdapter(new NodeAdapter(getApplicationContext(), R.layout.info, nodes2));
+        //list.setAdapter(new NodeAdapter(getApplicationContext(), R.layout.info, nodes2));
+        nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, nodes2);
+        list.setAdapter(nodeAdapter);
 
         list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if(click_Ck){
-                    view.setBackgroundColor(Color.CYAN);
+                    nodeAdapter.setClickNum(1);
+                    nodeAdapter.setIndexCk(i);
 
-                    TextView tv= (TextView)view.findViewById(R.id.num);
-                    tv.setBackgroundColor(Color.WHITE);
-                    System.out.println("test4: "+nodes2.get(i));
-                    System.out.println("test4: "+view.getId());
+                    nodeAdapter.notifyDataSetChanged();
+
                     searchVal_s=nodes2.get(i);
                     click_Ck=false;
                 }else{
@@ -179,14 +183,25 @@ public class ListActivity extends AppCompatActivity {
         Vector<Vector<Vector<LatLng>>> searchVec= new Vector();
         boolean saveCk=false;
         boolean stopCk=false;
+
+        LatLng start_l, stop_l;
+
+        if(distaceAB(searchL_s, searchL_e)){
+            start_l=searchL_s;
+            stop_l=searchL_e;
+        }else{
+            start_l=searchL_e;
+            stop_l=searchL_s;
+        }
+
         for(int i=0; i<nodeVec.size(); i++){
             Vector<Vector<LatLng>> sLegs= new Vector();
             for(int j=0; j<nodeVec.get(i).size();j++){
                 Vector<LatLng> sSteps= new Vector();
                 for(int k=0; k<nodeVec.get(i).get(j).size();k++){
-                    if(searchL_s.equals(nodeVec.get(i).get(j).get(k))){
+                    if(start_l.equals(nodeVec.get(i).get(j).get(k))){
                         saveCk=true;
-                    }else if(searchL_e.equals(nodeVec.get(i).get(j).get(k))){
+                    }else if(stop_l.equals(nodeVec.get(i).get(j).get(k))){
                         saveCk=false;
                         stopCk=true;
                     }
@@ -212,6 +227,33 @@ public class ListActivity extends AppCompatActivity {
             }
         }
         return searchVec;
+    }
+
+    public boolean distaceAB(LatLng l1, LatLng l2){
+        float dis1, dis2;
+        boolean flowCk;
+
+        Location loc_s= new Location("point_s");
+        loc_s.setLatitude(nodeVec.get(0).get(0).get(0).latitude);
+        loc_s.setLongitude(nodeVec.get(0).get(0).get(0).longitude);
+
+        Location loc_1= new Location("point_s");
+        loc_1.setLatitude(l1.latitude);
+        loc_1.setLongitude(l1.longitude);
+
+        Location loc_2= new Location("point_s");
+        loc_2.setLatitude(l2.latitude);
+        loc_2.setLongitude(l2.longitude);
+
+        dis1=loc_s.distanceTo(loc_1);
+        dis2=loc_s.distanceTo(loc_2);
+
+        if(dis1<dis2){
+            flowCk=true;
+        }else
+            flowCk=false;
+
+        return flowCk;
     }
 
     public void showMainActivity(String sendJSON){
