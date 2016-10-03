@@ -1,14 +1,19 @@
 package wgl.example.com.emtask4;
 
-import android.content.Intent;
 import android.os.AsyncTask;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,29 +25,37 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    PhpDown task;
-    SebcAdapter seAdapter;
-    ArrayList<SebcH> al=new ArrayList<SebcH>();
-    ListView seList;
     String total_num;
-    TextView total_num_t;
     Button total_bt;
-    Boolean all_ch=true; //모두보기 버튼 한번만 작동용
+
+    private GoogleMap mMap;
+
+    TourWgs tourWgs;
+    ArrayList<TourSt> tour_al= new ArrayList<TourSt>();
+    TextView total_tx;
+
+
+    int sw=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        //setContentView(R.layout.activity_maps);//생성 당시
+        setContentView(R.layout.back);
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+        /*생성 당시
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        */
 
-        seList= (ListView)findViewById(R.id.list);
-        total_num_t=(TextView)findViewById(R.id.tot_num);
-        total_bt=(Button)findViewById(R.id.button);
+        mapFragment.getMapAsync(this);
 
-        //json관련 초반 20개 표시, 총 개수 확인, asynctask 사용
-        task = new PhpDown();
-        task.execute("http://openapi.seoul.go.kr:8088/63766f77687368753535566668746d/json/SebcHistoricSiteKor/1/20/");
+        tourWgs= new TourWgs();
+        //api 인증 키 6e6a6764497368753433674b494178
+        tourWgs.execute("http://openAPI.seoul.go.kr:8088/6e6a6764497368753433674b494178/json/SebcTourStreetKor/1/20/");
 //api key 63766f77687368753535566668746d
 /*api 요청인자
 KEY         String(필수)  인증키 OpenAPI 에서 발급된 인증키
@@ -53,33 +66,42 @@ END_INDEX   INTEGER(필수) 요청종료위치 정수 입력 (페이징 끝번�
 MAIN_KEY    STRING(선택)  키 문자열
 */
 
-        //목록 클릭. intext활용 주소 및 명칭 보냄
-        seList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Intent intent= new Intent(getApplicationContext(),AddrActivity.class);
-                intent.putExtra("name",al.get(i).getName());
-                intent.putExtra("addr",al.get(i).getAddr());
-                startActivity(intent);
-            }
-        });
 
+        total_tx= (TextView)findViewById(R.id.total);
         total_bt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-                if(all_ch){
-                    task= new PhpDown();
-                    task.execute("http://openapi.seoul.go.kr:8088/63766f77687368753535566668746d/json/SebcHistoricSiteKor/21/"+
-                            total_num);
-                    all_ch=false;
-                }
-
+                tourWgs= new TourWgs();
+                tourWgs.execute("http://openAPI.seoul.go.kr:8088/6e6a6764497368753433674b494178/json/SebcTourStreetKor/21/"+
+                        total_num);
             }
         });
     }
+
+    /**
+     * Manipulates the map once available.
+     * This callback is triggered when the map is ready to be used.
+     * This is where we can add markers or lines, add listeners or move the camera. In this case,
+     * we just add a marker near Sydney, Australia.
+     * If Google Play services is not installed on the device, the user will be prompted to install
+     * it inside the SupportMapFragment. This method will only be triggered once the user has
+     * installed Google Play services and returned to the app.
+     */
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        // Add a marker in Sydney and move the camera
+        //LatLng sydney = new LatLng(-34, 151);
+        //mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+
+        //mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+
+    }
+
     //doINBackground, execute 파라미터 타입: OnPressUpdate 파라미터,
     //: doInBackground 리턴값
-    private class PhpDown extends AsyncTask<String, Integer,String> {
+    private class TourWgs extends AsyncTask<String, Integer,String> {
         @Override
         protected String doInBackground(String... urls) {
             StringBuilder jsonHtml = new StringBuilder();
@@ -117,49 +139,49 @@ MAIN_KEY    STRING(선택)  키 문자열
 
         protected void onPostExecute(String str) {
 
-            String cate1, cate2, cate3, name, addr;
-            //분류1, 분류2, 분류3, 명칭, 주소
-            SebcH sebc_n;
+            String name, wgs_x, wgs_y;
+            //명칭, x, y
+            TourSt tourSt;
 
             try {
                 /* JSON 출력값
-공통 list_total_count 총 데이터 건수 (정상조회 시 출력됨)
-공통 RESULT.CODE 요청결과 코드
-공통 RESULT.MESSAGE 요청결과 메시지
-1   MAIN_KEY 키
-2   CATE1_NAME 분류1
-3   CATE2_NAME 분류2
-4   CATE3_NAME 분류3
-5   NAME_KOR 명칭
-6   ADD_KOR 주소
-7   ADD_KOR_ROAD 도로명주소
-8   H_KOR_CITY 행정 시
-9   H_KOR_GU 행정 구
-10  H_KOR_DONG 행정 동
-*/
+                공통 list_total_count 총 데이터 건수 (정상조회 시 출력됨)
+                공통 RESULT.CODE 요청결과 코드 (하단 메세지설명 참고)
+                공통 RESULT.MESSAGE 요청결과 메시지 (하단 메세지설명 참고)
+                1 MAIN_KEY 키
+                2 NM_DP 검색 키워드
+                3 KOR_ALIAS alias
+                4 NAME_KOR 최종 표기명
+                5 ADD_KOR 지번 주소
+                6 LAW_SIDO 법정 시
+                7 LAW_SGG 법정 구
+                8 LAW_HEMD 법정 동
+                9 H_KOR_CITY 행정 시
+                10 H_KOR_GU 행정 구
+                11 H_KOR_DONG 행정 동
+                12 WGS84_X 중심 좌표 X
+                13 WGS84_Y 중심 좌표 Y
+                */
 
                 JSONObject root = new JSONObject(str);
                 JSONArray ja;
                 //전체 숫자 저장 및 표시
-                total_num= root.getJSONObject("SebcHistoricSiteKor").getString("list_total_count");
-                total_num_t.setText("총 숫자: "+total_num);
+                total_num= root.getJSONObject("SebcTourStreetKor").getString("list_total_count");
 
-                //유적지 관련 내용
-                ja=root.getJSONObject("SebcHistoricSiteKor").getJSONArray("row");
+                //관광 거리 명칭 및 좌표
+                ja=root.getJSONObject("SebcTourStreetKor").getJSONArray("row");
 
                 for (int i = 0; i < ja.length(); i++) {
 
                     JSONObject jo = ja.getJSONObject(i);
 
-                    cate1= jo.getString("CATE1_NAME");
-                    cate2= jo.getString("CATE2_NAME");
-                    cate3= jo.getString("CATE3_NAME");
+                    // 명칭, x, y
                     name= jo.getString("NAME_KOR");
-                    //시,구,동 종합
-                    addr= jo.getString("H_KOR_CITY")+" "+jo.getString("H_KOR_GU")+" "+jo.getString("H_KOR_DONG");
+                    wgs_x= jo.getString("WGS84_X");
+                    wgs_y= jo.getString("WGS84_Y");
 
-                    sebc_n=new SebcH(cate1, cate2, cate3, name, addr);
-                    al.add(sebc_n);
+                    tourSt=new TourSt(name, wgs_x, wgs_y);
+                    tour_al.add(tourSt);
                 }
 
             } catch (JSONException e) {
@@ -167,9 +189,34 @@ MAIN_KEY    STRING(선택)  키 문자열
                 e.printStackTrace();
 
             }
-            seAdapter= new SebcAdapter(getApplicationContext(), R.layout.sebc_list_item, al);
-            seAdapter.notifyDataSetChanged();
-            seList.setAdapter(seAdapter);
+            //마커 표시
+            if(sw==0){// 처음 20개 표시
+                for(int i=0; i<tour_al.size(); i++){
+
+                    LatLng la2= new LatLng(tour_al.get(i).getWgsY(),tour_al.get(i).getWgsX());
+                    mMap.addMarker(new MarkerOptions().position(la2).title((i+1)+":"+tour_al.get(i).getAlias()));
+
+                    if(i==0){
+                        mMap.moveCamera(CameraUpdateFactory.newLatLng(la2));
+                    }
+
+                }
+                sw=1;
+
+            }else if(sw==1){//나머지 전체 표시
+                for(int i=21; i<tour_al.size(); i++){
+
+                    LatLng la2= new LatLng(tour_al.get(i).getWgsY(),tour_al.get(i).getWgsX());
+                    mMap.addMarker(new MarkerOptions().position(la2).title((i+1)+":"+tour_al.get(i).getAlias()));
+
+                }
+                sw=2;
+            }
+
+
+            //현제 표시된 개수와 전체 관광거리 개수표시
+            total_tx.setText("Current/Total : "+tour_al.size()+"/"+total_num);
+
         }
 
         //OnpreExecute 백그라운드 작업 전, 초기화, 셋팅
