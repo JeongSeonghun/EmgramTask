@@ -2,11 +2,16 @@ package wgl.example.com.googlemappath1;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 //import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -29,7 +34,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -120,6 +128,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onClick(View view) {
                 Intent intent= new Intent(getApplicationContext(), ListActivity.class);
 
+                now= System.currentTimeMillis();
+                date= new Date(now);
+                String timeLog=sim.format(date);
+                String log="";
+
+                log+=timeLog+":"+"list click";
+                saveLog(log);
+
                 if(rePolyNum<3){
                     intent.putExtra("list",list_val);
                     startActivity(intent);
@@ -138,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        checkDangerousPermissions();
     }
 
     @Override
@@ -157,7 +174,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             String timeLog=sim.format(date);
             String log="";
 
-            log+=timeLog+":"+"search poly line end\n";
+            log+=timeLog+":"+"search poly line end";
             saveLog(log);
 
         } catch (JSONException e) {
@@ -247,7 +264,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String timeLog=sim.format(date);
                     String log="";
 
-                    log+=logSt+timeLog+":"+"poly line end\n";
+                    log+=logSt+timeLog+":"+"poly line end";
                     saveLog(log);
                 }else {
                     Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
@@ -256,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String timeLog=sim.format(date);
                     String log="";
 
-                    log+=logSt+timeLog+":"+"poly line end,false\n";
+                    log+=logSt+timeLog+":"+"poly line end,false";
                     saveLog(log);
                 }
 
@@ -335,7 +352,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Start Click\n";
+            log+=timeLog+":"+"Start Click";
             saveLog(log);
         }
 
@@ -349,20 +366,121 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 stopMark.setPosition(latLng);
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Stop Click\n";
+            log+=timeLog+":"+"Stop Click";
             saveLog(log);
         }
 
     }
 
-    public void saveLog(String log_data){
-        try {
-            // 파일 쓰기
-            //FileOutputStream fos = openFileOutput("text.txt", Context.MODE_PRIVATE);
-            FileOutputStream fos = openFileOutput("log.txt", Context.MODE_APPEND);
-            fos.write(log_data.getBytes());
-            fos.close();
 
-        }catch (Exception e){}
+    public void saveLog(String data){
+        if (!checkExternalStorage()) return;
+        // 외부메모리를 사용하지 못하면 끝냄
+
+
+        String log_data = data;
+
+
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+        path += "/MyDir";
+        try {
+            File f = new File(path, "log_vector.txt"); // 경로, 파일명
+
+            FileWriter write = new FileWriter(f, true);
+
+            write.append(data+"\n");
+            write.close();
+            System.out.println("저장완료");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
+    public void addFile(){
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+        path += "/MyDir";
+        File file = new File(path);
+        if(file.exists()){
+            Toast.makeText(getApplicationContext(),"폴더 존제", Toast.LENGTH_SHORT);
+            System.out.println("폴더존제");
+        }else{
+            file.mkdirs();
+            System.out.println("폴더 생성");
+        }
+
+        String sdPath=path+"/log_vector.txt";
+        file = new File(sdPath);
+        try {
+            if(file.exists()){
+                Toast.makeText(getApplicationContext(),"파일 존제", Toast.LENGTH_SHORT);
+                System.out.println("파일 존제");
+
+            }else{
+                file.createNewFile();
+                Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch(IOException ie){
+            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    boolean checkExternalStorage() {
+        String state;
+        state = Environment.getExternalStorageState();
+
+        String path= Environment.getExternalStorageDirectory().toString();
+        String dirPath = getFilesDir().getAbsolutePath();
+        System.out.println("test000_1: "+path);
+        System.out.println("test000_1: "+dirPath);
+
+
+        // 외부메모리 상태
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            // 읽기 쓰기 모두 가능
+            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
+            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
+            return true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
+            //읽기전용
+            Log.d("test0", "외부메모리 읽기만 가능");
+            System.out.println("test000: 외부메모리 읽기만 가능");
+            return false;
+        } else {
+            // 읽기쓰기 모두 안됨
+            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
+            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
+
+            return false;
+        }
+    }
+
+    //권한 확인
+    private void checkDangerousPermissions() {
+        String[] permissions = {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        };
+
+        int permissionCheck = PackageManager.PERMISSION_GRANTED;
+        for (int i = 0; i < permissions.length; i++) {
+            permissionCheck = ContextCompat.checkSelfPermission(this, permissions[i]);
+            if (permissionCheck == PackageManager.PERMISSION_DENIED) {
+                break;
+            }
+        }
+
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "권한 있음", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "권한 없음", Toast.LENGTH_LONG).show();
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
+                Toast.makeText(this, "권한 설명 필요함.", Toast.LENGTH_LONG).show();
+            } else {
+                ActivityCompat.requestPermissions(this, permissions, 1);
+            }
+        }
+    }
+
 }
