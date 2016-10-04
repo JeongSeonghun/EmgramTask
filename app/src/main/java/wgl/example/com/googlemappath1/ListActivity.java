@@ -3,9 +3,11 @@ package wgl.example.com.googlemappath1;
 import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -19,7 +21,11 @@ import com.google.android.gms.maps.model.LatLng;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Vector;
@@ -48,6 +54,10 @@ public class ListActivity extends AppCompatActivity {
     List<HashMap<String,String>> path_search;
     NodeAdapter nodeAdapter;
 
+    long now;
+    Date date;
+    SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,6 +81,13 @@ public class ListActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 int leg_i, step_i;
+                now= System.currentTimeMillis();
+                date= new Date(now);
+                String timeLog=sim.format(date);
+                String log="";
+
+                log+=timeLog+":"+"search Click";
+                saveLog2(log);
 
                 try{
                     if(searchleg.getText().toString().equals(""))
@@ -85,6 +102,7 @@ public class ListActivity extends AppCompatActivity {
 
                     if(pathCk_s.equals("OK")){
                         setList(leg_i,step_i);
+
                     }
                 }catch(NumberFormatException e){
                     e.printStackTrace();
@@ -188,6 +206,14 @@ public class ListActivity extends AppCompatActivity {
         nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, path_search);
         list.setAdapter(nodeAdapter);
 
+        now= System.currentTimeMillis();
+        date= new Date(now);
+        String timeLog=sim.format(date);
+        String log="";
+
+        log+=timeLog+":"+"list set";
+        saveLog2(log);
+
         list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -200,7 +226,23 @@ public class ListActivity extends AppCompatActivity {
                     //searchVal_s=nodes2.get(i);
                     searchIn_s=path_search.get(i);
                     click_Ck=false;
+
+                    now= System.currentTimeMillis();
+                    date= new Date(now);
+                    String timeLog=sim.format(date);
+                    String log="";
+
+                    log+=timeLog+":"+"first list click";
+                    saveLog2(log);
                 }else{
+                    now= System.currentTimeMillis();
+                    date= new Date(now);
+                    String timeLog=sim.format(date);
+                    String log="";
+
+                    log+=timeLog+":"+"second list click";
+                    saveLog2(log);
+
                     view.setBackgroundColor(Color.GREEN);
                     //searchVal_e=nodes2.get(i);
                     searchIn_e=path_search.get(i);
@@ -304,5 +346,58 @@ public class ListActivity extends AppCompatActivity {
 
 
         return sendString;
+    }
+
+    public void saveLog2(String data){
+        if (!checkExternalStorage()) return;
+        // 외부메모리를 사용하지 못하면 끝냄
+
+
+        String log_data = data;
+
+
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+        path += "/MyDir";
+        try {
+            File f = new File(path, "log.txt"); // 경로, 파일명
+
+            FileWriter write = new FileWriter(f, true);
+
+            write.append(data+"\n");
+            write.close();
+            System.out.println("저장완료");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    boolean checkExternalStorage() {
+        String state;
+        state = Environment.getExternalStorageState();
+
+        String path= Environment.getExternalStorageDirectory().toString();
+        String dirPath = getFilesDir().getAbsolutePath();
+        System.out.println("test000_1: "+path);
+        System.out.println("test000_1: "+dirPath);
+
+
+        // 외부메모리 상태
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            // 읽기 쓰기 모두 가능
+            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
+            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
+            return true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
+            //읽기전용
+            Log.d("test0", "외부메모리 읽기만 가능");
+            System.out.println("test000: 외부메모리 읽기만 가능");
+            return false;
+        } else {
+            // 읽기쓰기 모두 안됨
+            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
+            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
+
+            return false;
+        }
     }
 }

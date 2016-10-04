@@ -34,6 +34,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -110,6 +111,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 date= new Date(now);
                 String timeLog=sim.format(date);
                 logSt=timeLog+":"+"path Click\n";
+
+
             }
         });
 
@@ -133,6 +136,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onClick(View view) {
                 Intent intent= new Intent(getApplicationContext(), ListActivity.class);
 
+                now= System.currentTimeMillis();
+                date= new Date(now);
+                String timeLog=sim.format(date);
+                String log="";
+
+                log+=timeLog+":"+"list click";
+                saveLog2(log);
+
                 if(rePolyNum<3){
                     intent.putExtra("list",list_val);
                     startActivity(intent);
@@ -150,6 +161,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 startActivity(intent);
             }
         });
+
+        checkDangerousPermissions();
+        addFile();
 
     }
 
@@ -170,8 +184,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             String timeLog=sim.format(date);
             String log="";
 
-            log+=timeLog+":"+"search poly line end\n";
-            saveLog(log);
+            log+=timeLog+":"+"search poly line end";
+            saveLog2(log);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -260,8 +274,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String timeLog=sim.format(date);
                     String log="";
 
-                    log+=logSt+timeLog+":"+"poly line end\n";
-                    saveLog(log);
+                    log+=logSt+timeLog+":"+"poly line end";
+                    saveLog2(log);
                 }else {
                     Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
                     now= System.currentTimeMillis();
@@ -269,8 +283,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String timeLog=sim.format(date);
                     String log="";
 
-                    log+=logSt+timeLog+":"+"poly line end,false\n";
-                    saveLog(log);
+                    log+=logSt+timeLog+":"+"poly line end,false";
+                    saveLog2(log);
                 }
 
             } catch (JSONException e) {
@@ -347,8 +361,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Start Click\n";
-            saveLog(log);
+            log+=timeLog+":"+"Start Click";
+            saveLog2(log);
         }
 
         if(stopR.isChecked()){  //stop선택시
@@ -361,8 +375,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 stopMark.setPosition(latLng);
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Stop Click\n";
-            saveLog(log);
+            log+=timeLog+":"+"Stop Click";
+            saveLog2(log);
         }
 
     }
@@ -385,23 +399,59 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         String log_data = data;
 
-        //폴더 생성
-        String sdPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-        sdPath += "/MyDir";
-        File file = new File(sdPath);
-        file.mkdirs();
 
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+        path += "/MyDir";
         try {
-            File path = Environment.getExternalStoragePublicDirectory
-                    (Environment.DIRECTORY_PICTURES);
+            //File path = Environment.getExternalStoragePublicDirectory
+            //        (Environment.DIRECTORY_PICTURES);
             File f = new File(path, "log.txt"); // 경로, 파일명
-            FileWriter write = new FileWriter(f, false);
+
+            FileWriter write = new FileWriter(f, true);
+            /*
             PrintWriter out = new PrintWriter(write);
-            out.println(data);
-            out.close();
+            out.println(log_data);    //test
+            out.write(log_data);    //tes
+
+            BufferedWriter out = new BufferedWriter(write);
+            out.write(data);
+
+            out.close();    //Hellow worl
+            */
+            write.append(data+"\n");
+            write.close();
             System.out.println("저장완료");
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void addFile(){
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
+        path += "/MyDir";
+        File file = new File(path);
+        if(file.exists()){
+            Toast.makeText(getApplicationContext(),"폴더 존제", Toast.LENGTH_SHORT);
+            System.out.println("폴더존제");
+        }else{
+            file.mkdirs();
+            System.out.println("폴더 생성");
+        }
+
+        String sdPath=path+"/log.txt";
+        file = new File(sdPath);
+        try {
+            if(file.exists()){
+                Toast.makeText(getApplicationContext(),"파일 존제", Toast.LENGTH_SHORT);
+                System.out.println("파일 존제");
+
+            }else{
+                file.createNewFile();
+                Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch(IOException ie){
+            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -458,25 +508,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             return false;
         }
     }
-    //폴더 생성
-    public void tempSave(){
-        String sdPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-        sdPath += "/MyDir";
-        File file = new File(sdPath);
-        file.mkdirs();
-
-        sdPath += "/MyImg.jpg";
-
-        file = new File(sdPath);
-        try {
-            file.createNewFile();
-            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
-        } catch(IOException ie){
-            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-
 
     //권한 확인
     private void checkDangerousPermissions() {
