@@ -2,11 +2,16 @@ package wgl.example.com.googlemappath1;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 //import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -29,12 +34,20 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener
@@ -143,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        Vector<Vector<Vector<LatLng>>> searchPath;
+        List<HashMap<String,String>> searchPath;
         try {
             JSONObject gDirectJo = new JSONObject(intent.getStringExtra("list"));
 
@@ -226,7 +239,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         protected void onPostExecute(String str) {
 
-            Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
+            List<HashMap<String, String>> path;
             String pathCk_s;    //경로 데이터 확인
             try {
                 JSONObject gDirectJo = new JSONObject(str);
@@ -235,13 +248,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 //경로 얻기
                 DirectionsJSONParser parser = new DirectionsJSONParser();
-                nodeVec=parser.parse(gDirectJo);
+                path=parser.parse(gDirectJo);
 
                 if(rePolyCheck)  //세가지 경로 중 처음 경로만 저장
                 list_val=gDirectJo.toString();
 
                 if(pathCk(pathCk_s)) {
-                    addPolyline(nodeVec, true);
+                    addPolyline(path, true);
                     now= System.currentTimeMillis();
                     date= new Date(now);
                     String timeLog=sim.format(date);
@@ -287,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     //polyline 그리기
-    public void addPolyline(Vector<Vector<Vector<LatLng>>> node, boolean seachCk){
+    public void addPolyline(List<HashMap<String, String>> node, boolean seachCk){
 
         PolylineOptions poly= new PolylineOptions().geodesic(true);
         int[] width={3,10};
@@ -302,11 +315,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         for(int i=0; i<node.size(); i++){
-            for(int j=0; j<node.get(i).size(); j++){
-                poly.addAll(node.get(i).get(j));
-                poly.width(width[setNum]);
-                poly.color(polColor[setNum]);
-            }
+            poly.add(new LatLng(Double.valueOf(node.get(i).get("lat")),
+                    Double.valueOf(node.get(i).get("lng"))));
+            poly.width(width[setNum]);
+            poly.color(polColor[setNum]);
         }
 
         map.addPolyline(poly);
@@ -364,5 +376,133 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             fos.close();
 
         }catch (Exception e){}
+    }
+
+    public void saveLog2(String data){
+        if (!checkExternalStorage()) return;
+        // 외부메모리를 사용하지 못하면 끝냄
+
+
+        String log_data = data;
+
+        //폴더 생성
+        String sdPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+        sdPath += "/MyDir";
+        File file = new File(sdPath);
+        file.mkdirs();
+
+        try {
+            File path = Environment.getExternalStoragePublicDirectory
+                    (Environment.DIRECTORY_PICTURES);
+            File f = new File(path, "log.txt"); // 경로, 파일명
+            FileWriter write = new FileWriter(f, false);
+            PrintWriter out = new PrintWriter(write);
+            out.println(data);
+            out.close();
+            System.out.println("저장완료");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void roadLog(){
+        if (!checkExternalStorage()) return;
+        // 외부메모리를 사용하지 못하면 끝냄
+
+        try {
+            StringBuffer data = new StringBuffer();
+            File path = Environment.getExternalStoragePublicDirectory
+                    (Environment.DIRECTORY_PICTURES);
+            File f = new File(path, "external.txt");
+
+            BufferedReader buffer = new BufferedReader
+                    (new FileReader(f));
+            String str = buffer.readLine();
+            while (str!=null) {
+                data.append(str+"\n");
+                str = buffer.readLine();
+            }
+            //tv.setText(data);
+            buffer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    boolean checkExternalStorage() {
+        String state;
+        state = Environment.getExternalStorageState();
+
+        String path= Environment.getExternalStorageDirectory().toString();
+        String dirPath = getFilesDir().getAbsolutePath();
+        System.out.println("test000_1: "+path);
+        System.out.println("test000_1: "+dirPath);
+
+
+        // 외부메모리 상태
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            // 읽기 쓰기 모두 가능
+            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
+            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
+            return true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
+            //읽기전용
+            Log.d("test0", "외부메모리 읽기만 가능");
+            System.out.println("test000: 외부메모리 읽기만 가능");
+            return false;
+        } else {
+            // 읽기쓰기 모두 안됨
+            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
+            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
+
+            return false;
+        }
+    }
+    //폴더 생성
+    public void tempSave(){
+        String sdPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+        sdPath += "/MyDir";
+        File file = new File(sdPath);
+        file.mkdirs();
+
+        sdPath += "/MyImg.jpg";
+
+        file = new File(sdPath);
+        try {
+            file.createNewFile();
+            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
+        } catch(IOException ie){
+            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+
+    //권한 확인
+    private void checkDangerousPermissions() {
+        String[] permissions = {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        };
+
+        int permissionCheck = PackageManager.PERMISSION_GRANTED;
+        for (int i = 0; i < permissions.length; i++) {
+            permissionCheck = ContextCompat.checkSelfPermission(this, permissions[i]);
+            if (permissionCheck == PackageManager.PERMISSION_DENIED) {
+                break;
+            }
+        }
+
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "권한 있음", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "권한 없음", Toast.LENGTH_LONG).show();
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
+                Toast.makeText(this, "권한 설명 필요함.", Toast.LENGTH_LONG).show();
+            } else {
+                ActivityCompat.requestPermissions(this, permissions, 1);
+            }
+        }
     }
 }

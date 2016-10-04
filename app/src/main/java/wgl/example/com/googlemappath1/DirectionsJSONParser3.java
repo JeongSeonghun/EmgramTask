@@ -16,8 +16,9 @@ import java.util.Vector;
 // Vector<Vector<LatLng>> rout<path> 의 경우 leg에 따른 step들의 모든 경로들을 가짐, 사용X
 // Vector<Vector<Vector<LatLng>>> search<search_leg<search_step>> 의 경우 leg에 따른 스탭들을 가짐
 
-public class DirectionsJSONParser {
+public class DirectionsJSONParser3 {
 
+    Vector<Vector<Vector<LatLng>>> search=new Vector();
     List<HashMap<String, String>> path= new ArrayList<>();
 
     /** Receives a JSONObject and returns a list of lists containing latitude and longitude */
@@ -48,7 +49,7 @@ public class DirectionsJSONParser {
 
                 //List path = new ArrayList<HashMap<String, String>>();
                 //Vector<LatLng> path= new Vector<LatLng>();
-                //Vector<Vector<LatLng>> search_leg= new Vector();
+                Vector<Vector<LatLng>> search_leg= new Vector();
 
                 /** Traversing all legs */
                 //경유지 지정할 경우 legs는 2이상일수도 있음
@@ -73,14 +74,19 @@ public class DirectionsJSONParser {
                         /** Traversing all points */
                         //step[k]의 polyline의 point들을 종합하여 HashMap에 저장
                         for(int l=0;l<list.size();l++){
-
+                            /*
+                            HashMap<String, String> hm = new HashMap<String, String>();
+                            hm.put("lat", Double.toString(((LatLng)list.get(l)).latitude) );
+                            hm.put("lng", Double.toString(((LatLng)list.get(l)).longitude) );
+                            path.add(hm);
+                            */
+                            //path.add(list.get(l));// k번째 step의 point들을 저장
                             HashMap<String, String> hm = new HashMap<String, String>();
                             hm.put("lat", Double.toString(((LatLng)list.get(l)).latitude) );
                             hm.put("lng", Double.toString(((LatLng)list.get(l)).longitude) );
                             hm.put("leg", String.valueOf(j+1) );
                             hm.put("step", String.valueOf(k+1) );
                             path.add(hm);
-
                         }
 
                     }

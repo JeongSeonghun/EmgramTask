@@ -10,11 +10,14 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 public class NodeAdapter extends BaseAdapter {
     Context context;
-    Vector<LatLng> al= new Vector();
+    //Vector<LatLng> al= new Vector();
+    List<HashMap<String,String>> al;
     int layout;
 
     int clickNum;
@@ -22,7 +25,8 @@ public class NodeAdapter extends BaseAdapter {
 
     LayoutInflater inf;// xml에 정의된 자원(resource)들을 view로 반환
 
-    public NodeAdapter(Context context, int layout, Vector<LatLng> al){
+    //public NodeAdapter(Context context, int layout, Vector<LatLng> al){
+    public NodeAdapter(Context context, int layout, List<HashMap<String,String>> al){
         this.context= context;
         this.layout= layout;
         this.al=al;
@@ -59,7 +63,7 @@ public class NodeAdapter extends BaseAdapter {
         TextView value = (TextView) view.findViewById(R.id.wgs);
 
         num.setText(String.valueOf(i+1));
-        value.setText(al.get(i).toString());
+        value.setText(al.get(i).get("lat")+"/"+al.get(i).get("lng"));
 
         if(indexCk==i&&clickNum==1){
             view.setBackgroundColor(Color.CYAN);

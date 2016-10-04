@@ -6,6 +6,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 //polyline에 사용할 노드들 좌표를 얻기위해 참고
 //http://wptrafficanalyzer.in/blog/drawing-driving-route-directions-between-two-locations-using-google-directions-in-google-map-android-api-v2/
@@ -15,12 +18,13 @@ import java.util.Vector;
 
 public class DirectionsJSONParser2 {
 
-    Vector<Vector<Vector<LatLng>>> search=new Vector();
+    List<HashMap<String,String>> path=new ArrayList<>();
 
     /** Receives a JSONObject and returns a list of lists containing latitude and longitude */
     //public List<List<HashMap<String,String>>> parse(JSONObject jObject){
     //public Vector<Vector<LatLng>> parse(JSONObject jObject){
-    public Vector<Vector<Vector<LatLng>>> parse(JSONObject jObject){
+    //public Vector<Vector<Vector<LatLng>>> parse(JSONObject jObject){
+    public List<HashMap<String, String>> parse(JSONObject jObject){
 
         //List<List<HashMap<String, String>>> routes = new ArrayList<List<HashMap<String,String>>>() ;
         //Vector<Vector<LatLng>> routes= new Vector<Vector<LatLng>>();    //전체 step을 leg에따라서 출력
@@ -44,7 +48,7 @@ public class DirectionsJSONParser2 {
 
                 //List path = new ArrayList<HashMap<String, String>>();
                 //Vector<LatLng> path= new Vector<LatLng>();
-                Vector<Vector<LatLng>> search_leg= new Vector();
+                //Vector<Vector<LatLng>> search_leg= new Vector();
 
                 /** Traversing all legs */
                 //경유지 지정할 경우 legs는 2이상일수도 있음
@@ -54,7 +58,7 @@ public class DirectionsJSONParser2 {
                     //              ,배열traffic_speed_entry, 배열via_waypoint 제외
                     jSteps = ( (JSONObject)jLegs.get(j)).getJSONArray("steps");
 
-                    Vector<LatLng> list=new Vector();
+                    //Vector<LatLng> list=new Vector();
 
                     /** Traversing all steps */
                     for(int k=0;k<jSteps.length();k++){ //step배열 객체 전체 확인
@@ -65,14 +69,22 @@ public class DirectionsJSONParser2 {
                         //decodepoly 제작 메서드 List<LatLng>반환
                         //List<LatLng> list = decodePoly(polyline);
                         //Vector<LatLng> list= decodePoly(polyline);
+                        /*
                         list.add(new LatLng(Double.valueOf(jSteps.getJSONObject(k).getString("lat")),
                                 Double.valueOf(jSteps.getJSONObject(k).getString("lng"))));
+                                */
+                        HashMap<String, String> hm = new HashMap<String, String>();
+                        hm.put("lat", jSteps.getJSONObject(k).getString("lat") );
+                        hm.put("lng", jSteps.getJSONObject(k).getString("lng") );
+                        hm.put("leg", String.valueOf(j+1) );
+                        hm.put("step", String.valueOf(k+1) );
+                        path.add(hm);
 
                     }
                     //routes.add(path); //j번째 leg들을 저장
-                    search_leg.add(list);
+                    //search_leg.add(list);
                 }
-                search.add(search_leg);
+                //search.add(search_leg);
             }
 
         } catch (JSONException e) {
@@ -81,7 +93,8 @@ public class DirectionsJSONParser2 {
         }
 
         //return routes;
-        return search;
+        //return search;
+        return path;
 
     }
     /**

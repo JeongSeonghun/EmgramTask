@@ -12,12 +12,16 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 public class ListActivity extends AppCompatActivity {
@@ -35,11 +39,13 @@ public class ListActivity extends AppCompatActivity {
     String pathCk_s="";
 
     boolean click_Ck=true;
-    LatLng searchVal_s, searchVal_e;
+    //LatLng searchVal_s, searchVal_e;
+    HashMap<String,String> searchIn_s, searchIn_e;
 
-    Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
-    Vector<LatLng> nodes2;
-
+    //Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
+    //Vector<LatLng> nodes2;
+    List<HashMap<String,String>> path= new ArrayList<>();
+    List<HashMap<String,String>> path_search;
     NodeAdapter nodeAdapter;
 
     @Override
@@ -82,6 +88,7 @@ public class ListActivity extends AppCompatActivity {
                     }
                 }catch(NumberFormatException e){
                     e.printStackTrace();
+                    Toast.makeText(getApplicationContext(),"조건을 확인해 주세요.",Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -96,7 +103,7 @@ public class ListActivity extends AppCompatActivity {
 
             parser = new DirectionsJSONParser();
 
-            nodeVec=parser.parse(gDirectJo);    //ndedVec(rout):[legs:[steps:[point:{LatLng},...],...],...]
+            path=parser.parse(gDirectJo);    //ndedVec(rout):[legs:[steps:[point:{LatLng},...],...],...]
 
 
         } catch (JSONException e) {
@@ -114,49 +121,71 @@ public class ListActivity extends AppCompatActivity {
     public void setList(int leg_Num, int step_Num){
         //num: step 인덱스, 0=전체
 
-        nodes2= new Vector();
+        //nodes2= new Vector();
+        path_search= new ArrayList<>();
         String legNum="";
         String stepNum="";
 
-
-        if(nodeVec.size()<1){
+        int all_num=path.size();
+        int leg_all=Integer.valueOf(path.get(all_num-1).get("leg"));
+        if(path.size()<1){
             legNum+="0";
             stepNum+="0";
         }else{
-            for(int i=0; i<nodeVec.size(); i++){
-                if(i==0){
-                    legNum+=String.valueOf(i+1);
-                    stepNum+=String.valueOf(nodeVec.get(i).size());
-                }else{
-                    legNum+="/"+String.valueOf(i+1);
-                    stepNum+="/"+String.valueOf(nodeVec.get(i).size());
+            if(leg_all==1){
+                legNum=path.get(all_num-1).get("leg");
+                stepNum=path.get(all_num-1).get("step");
+            }else{
+                String leg_num="1";
+                for(int i=0; i<path.size(); i++){
+                    if(!leg_num.equals(path.get(i).get("leg"))){
+                        if(path.get(i).get("leg").equals("1")){
+                            legNum+=path.get(i).get("leg");
+                            stepNum+=path.get(i).get("step");
+                        }else{
+                            legNum+="/"+path.get(i).get("leg");
+                            stepNum+="/"+path.get(i).get("step");
+                        }
+                    }
+                    if(i==path.size()-1){
+                        legNum+="/"+path.get(i).get("leg");
+                        stepNum+="/"+path.get(i).get("step");
+                    }
                 }
             }
+
         }
         legTotal.setText(legNum);
         stepTotal.setText(stepNum);
 
         if(leg_Num==0&&step_Num==0){
-            for(int i=0; i<nodeVec.size(); i++){        //i번째 leg의 좌표Vector Vector<Vector<LatLng>>
-                for(int j=0; j<nodeVec.get(i).size(); j++){ //배열의 j번째 LatLng 객체 Vector<LatLng>
-                    nodes2.addAll(nodeVec.get(i).get(j));
-                }
+            for(int i=0; i<path.size(); i++){        //i번째 leg의 좌표Vector Vector<Vector<LatLng>>
+                path_search.add(path.get(i));
+                //Toast.makeText(getApplicationContext(),"전체 목록입니다.",Toast.LENGTH_SHORT).show();
             }
 
         }else if(leg_Num>0&&step_Num>=0){
             if(step_Num==0&&leg_Num<=Integer.valueOf(legNum)){
-                for(int i=0; i<nodeVec.get(leg_Num-1).size(); i++){
-                    nodes2.addAll(nodeVec.get(leg_Num-1).get(i));
+                for(int i=0; i<path.size(); i++){
+                    if(Integer.valueOf(path.get(i).get("leg"))==leg_Num)
+                    path_search.add(path.get(i));
                 }
 
             }else if(leg_Num<=Integer.valueOf(legNum)&&
                     step_Num<=Integer.valueOf(stepNum)&&step_Num>0){
-                nodes2.addAll(nodeVec.get(leg_Num-1).get(step_Num-1));
+                for(int i=0; i<path.size(); i++){
+                    if(Integer.valueOf(path.get(i).get("leg"))==leg_Num&&
+                            Integer.valueOf(path.get(i).get("step"))==step_Num){
+                        path_search.add(path.get(i));
+                    }
+                }
+            }else{
+                Toast.makeText(getApplicationContext(),"검색 조건을 확인해주세요.",Toast.LENGTH_SHORT).show();
             }
         }
-        node.setText(String.valueOf(nodes2.size()));
+        node.setText(String.valueOf(path_search.size()));
         //list.setAdapter(new NodeAdapter(getApplicationContext(), R.layout.info, nodes2));
-        nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, nodes2);
+        nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, path_search);
         list.setAdapter(nodeAdapter);
 
         list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -168,25 +197,34 @@ public class ListActivity extends AppCompatActivity {
 
                     nodeAdapter.notifyDataSetChanged();
 
-                    searchVal_s=nodes2.get(i);
+                    //searchVal_s=nodes2.get(i);
+                    searchIn_s=path_search.get(i);
                     click_Ck=false;
                 }else{
                     view.setBackgroundColor(Color.GREEN);
-                    searchVal_e=nodes2.get(i);
-                    showMainActivity(sendJSONString(searchPath(searchVal_s, searchVal_e)));
+                    //searchVal_e=nodes2.get(i);
+                    searchIn_e=path_search.get(i);
+                    showMainActivity(sendJSONString(searchPath(searchIn_s, searchIn_e)));
                 }
             }
         });
     }
 
-    public Vector<Vector<Vector<LatLng>>> searchPath(LatLng searchL_s, LatLng searchL_e){
-        Vector<Vector<Vector<LatLng>>> searchVec= new Vector();
-        boolean saveCk=false;
-        boolean stopCk=false;
+    public List<HashMap<String, String>> searchPath(HashMap<String,String> searchL_s,
+                                                     HashMap<String,String> searchL_e){
+        //Vector<Vector<Vector<LatLng>>> searchVec= new Vector();
+        //boolean saveCk=false;
+        //boolean stopCk=false;
 
-        LatLng start_l, stop_l;
+        //LatLng start_l, stop_l;
+        HashMap<String, String> start_l, stop_l;
+        List<HashMap<String, String>> searchHash=new ArrayList<>();
+        int start_i, stop_i;
 
-        if(distaceAB(searchL_s, searchL_e)){
+        if(distaceAB(new LatLng(Double.valueOf(searchL_s.get("lat"))
+                , Double.valueOf(searchL_s.get("lng")))
+                , new LatLng(Double.valueOf(searchL_e.get("lat"))
+                        , Double.valueOf(searchL_e.get("lng"))))){
             start_l=searchL_s;
             stop_l=searchL_e;
         }else{
@@ -194,39 +232,12 @@ public class ListActivity extends AppCompatActivity {
             stop_l=searchL_s;
         }
 
-        for(int i=0; i<nodeVec.size(); i++){
-            Vector<Vector<LatLng>> sLegs= new Vector();
-            for(int j=0; j<nodeVec.get(i).size();j++){
-                Vector<LatLng> sSteps= new Vector();
-                for(int k=0; k<nodeVec.get(i).get(j).size();k++){
-                    if(start_l.equals(nodeVec.get(i).get(j).get(k))){
-                        saveCk=true;
-                    }else if(stop_l.equals(nodeVec.get(i).get(j).get(k))){
-                        saveCk=false;
-                        stopCk=true;
-                    }
-                    if(saveCk){
-                        sSteps.add(nodeVec.get(i).get(j).get(k));
-                    }else if(stopCk){
-                        sSteps.add(nodeVec.get(i).get(j).get(k));
-                        break;
-                    }
-                }
-                if(saveCk){
-                    sLegs.add(sSteps);
-                }else if(stopCk){
-                    sLegs.add(sSteps);
-                    break;
-                }
-            }
-            if(saveCk) {
-                searchVec.add(sLegs);
-            }else if(stopCk){
-                searchVec.add(sLegs);
-                break;
-            }
-        }
-        return searchVec;
+
+        start_i=path.indexOf(start_l);
+        stop_i=path.indexOf(stop_l);
+        searchHash=path.subList(start_i,stop_i);
+
+        return searchHash;
     }
 
     public boolean distaceAB(LatLng l1, LatLng l2){
@@ -234,8 +245,8 @@ public class ListActivity extends AppCompatActivity {
         boolean flowCk;
 
         Location loc_s= new Location("point_s");
-        loc_s.setLatitude(nodeVec.get(0).get(0).get(0).latitude);
-        loc_s.setLongitude(nodeVec.get(0).get(0).get(0).longitude);
+        loc_s.setLatitude(Double.valueOf(path.get(0).get("lat")));
+        loc_s.setLongitude(Double.valueOf(path.get(0).get("lng")));
 
         Location loc_1= new Location("point_s");
         loc_1.setLatitude(l1.latitude);
@@ -263,28 +274,30 @@ public class ListActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    public String sendJSONString(Vector<Vector<Vector<LatLng>>> searchPath){
+    //public String sendJSONString(Vector<Vector<Vector<LatLng>>> searchPath){
+    public String sendJSONString(List<HashMap<String,String>> searchPath){
+
         String sendString="{\"routes\":[";
 
-        for(int i=0; i<searchPath.size();i++){//legs
-            if(i==0) sendString+="{";
-            else sendString+=",{";
+
+            sendString+="{";
+
             sendString+="\"legs\":[";
-            for(int j=0; j<searchPath.get(i).size();j++){//steps
-                if(j==0) sendString+="{";
-                else sendString+=",{";
+
+                sendString+="{";
+
                 sendString+="\"steps\":[";
-                for(int k=0; k<searchPath.get(i).get(j).size();k++){//point
-                    if(k==0) sendString+="{";
+                for(int i=0; i<searchPath.size();i++){//point
+                    if(i==0) sendString+="{";
                     else sendString+=",{";
-                    sendString+="\"lat\":\""+String.valueOf(searchPath.get(i).get(j).get(k).latitude)
-                            +"\",\"lng\":\""+String.valueOf(searchPath.get(i).get(j).get(k).longitude)
+                    sendString+="\"lat\":\""+searchPath.get(i).get("lat")
+                            +"\",\"lng\":\""+searchPath.get(i).get("lng")
                             +"\"}";
                 }
                 sendString+="]}";
-            }
+
             sendString+="]}";
-        }
+
         sendString+="]}";
 
         System.out.println("test005 : "+sendString);
