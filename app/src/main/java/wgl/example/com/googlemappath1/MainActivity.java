@@ -1,6 +1,5 @@
 package wgl.example.com.googlemappath1;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -14,7 +13,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 //import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -34,22 +32,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener
         ,GoogleMap.OnMapClickListener{
@@ -72,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     int rePolyNum=0;
 
     Button logShow;
-    String logSt, logSp;
+    String logSt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String log="";
 
                 log+=timeLog+":"+"list click";
-                saveLog2(log);
+                saveLog(log);
 
                 if(rePolyNum<3){
                     intent.putExtra("list",list_val);
@@ -170,26 +162,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+
         List<HashMap<String,String>> searchPath;
-        try {
-            JSONObject gDirectJo = new JSONObject(intent.getStringExtra("list"));
 
-            DirectionsJSONParser2 parser2= new DirectionsJSONParser2();
-            searchPath=parser2.parse(gDirectJo);
+        SearchNodes searchNodes=(SearchNodes)intent.getParcelableExtra("path");
+        searchPath= searchNodes.getSearchList();
+        addPolyline(searchPath, false);
 
-            addPolyline(searchPath, false);
+        now= System.currentTimeMillis();
+        date= new Date(now);
+        String timeLog=sim.format(date);
+        String log="";
 
-            now= System.currentTimeMillis();
-            date= new Date(now);
-            String timeLog=sim.format(date);
-            String log="";
-
-            log+=timeLog+":"+"search poly line end";
-            saveLog2(log);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        log+=timeLog+":"+"search poly line end";
+        saveLog(log);
 
     }
 
@@ -275,7 +261,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String log="";
 
                     log+=logSt+timeLog+":"+"poly line end";
-                    saveLog2(log);
+                    saveLog(log);
                 }else {
                     Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
                     now= System.currentTimeMillis();
@@ -284,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     String log="";
 
                     log+=logSt+timeLog+":"+"poly line end,false";
-                    saveLog2(log);
+                    saveLog(log);
                 }
 
             } catch (JSONException e) {
@@ -362,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
             log+=timeLog+":"+"Start Click";
-            saveLog2(log);
+            saveLog(log);
         }
 
         if(stopR.isChecked()){  //stop선택시
@@ -376,48 +362,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
             log+=timeLog+":"+"Stop Click";
-            saveLog2(log);
+            saveLog(log);
         }
 
     }
 
-    public void saveLog(String log_data){
-        try {
-            // 파일 쓰기
-            //FileOutputStream fos = openFileOutput("text.txt", Context.MODE_PRIVATE);
-            FileOutputStream fos = openFileOutput("log.txt", Context.MODE_APPEND);
-            fos.write(log_data.getBytes());
-            fos.close();
-
-        }catch (Exception e){}
-    }
-
-    public void saveLog2(String data){
+    public void saveLog(String data){
         if (!checkExternalStorage()) return;
         // 외부메모리를 사용하지 못하면 끝냄
-
-
-        String log_data = data;
-
 
         String path = Environment.getExternalStorageDirectory().getAbsolutePath();
         path += "/MyDir";
         try {
-            //File path = Environment.getExternalStoragePublicDirectory
-            //        (Environment.DIRECTORY_PICTURES);
-            File f = new File(path, "log.txt"); // 경로, 파일명
+            File f = new File(path, "log_hashmap.txt"); // 경로, 파일명
 
             FileWriter write = new FileWriter(f, true);
-            /*
-            PrintWriter out = new PrintWriter(write);
-            out.println(log_data);    //test
-            out.write(log_data);    //tes
 
-            BufferedWriter out = new BufferedWriter(write);
-            out.write(data);
-
-            out.close();    //Hellow worl
-            */
             write.append(data+"\n");
             write.close();
             System.out.println("저장완료");
@@ -438,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             System.out.println("폴더 생성");
         }
 
-        String sdPath=path+"/log.txt";
+        String sdPath=path+"/log_hashmap.txt";
         file = new File(sdPath);
         try {
             if(file.exists()){
@@ -455,39 +415,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    public void roadLog(){
-        if (!checkExternalStorage()) return;
-        // 외부메모리를 사용하지 못하면 끝냄
-
-        try {
-            StringBuffer data = new StringBuffer();
-            File path = Environment.getExternalStoragePublicDirectory
-                    (Environment.DIRECTORY_PICTURES);
-            File f = new File(path, "external.txt");
-
-            BufferedReader buffer = new BufferedReader
-                    (new FileReader(f));
-            String str = buffer.readLine();
-            while (str!=null) {
-                data.append(str+"\n");
-                str = buffer.readLine();
-            }
-            //tv.setText(data);
-            buffer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     boolean checkExternalStorage() {
         String state;
         state = Environment.getExternalStorageState();
-
-        String path= Environment.getExternalStorageDirectory().toString();
-        String dirPath = getFilesDir().getAbsolutePath();
-        System.out.println("test000_1: "+path);
-        System.out.println("test000_1: "+dirPath);
-
 
         // 외부메모리 상태
         if (Environment.MEDIA_MOUNTED.equals(state)) {

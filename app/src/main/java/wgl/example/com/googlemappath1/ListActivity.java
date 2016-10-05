@@ -2,7 +2,6 @@ package wgl.example.com.googlemappath1;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.location.Location;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,8 +15,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.model.LatLng;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -28,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
 
 public class ListActivity extends AppCompatActivity {
     ListView list;
@@ -57,6 +53,7 @@ public class ListActivity extends AppCompatActivity {
     long now;
     Date date;
     SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
+    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +84,7 @@ public class ListActivity extends AppCompatActivity {
                 String log="";
 
                 log+=timeLog+":"+"search Click";
-                saveLog2(log);
+                saveLog(log);
 
                 try{
                     if(searchleg.getText().toString().equals(""))
@@ -110,6 +107,7 @@ public class ListActivity extends AppCompatActivity {
                 }
             }
         });
+
     }
 
     public void receiveNodes(String receive){
@@ -212,7 +210,7 @@ public class ListActivity extends AppCompatActivity {
         String log="";
 
         log+=timeLog+":"+"list set";
-        saveLog2(log);
+        saveLog(log);
 
         list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -233,7 +231,7 @@ public class ListActivity extends AppCompatActivity {
                     String log="";
 
                     log+=timeLog+":"+"first list click";
-                    saveLog2(log);
+                    saveLog(log);
                 }else{
                     now= System.currentTimeMillis();
                     date= new Date(now);
@@ -241,12 +239,14 @@ public class ListActivity extends AppCompatActivity {
                     String log="";
 
                     log+=timeLog+":"+"second list click";
-                    saveLog2(log);
+                    saveLog(log);
 
                     view.setBackgroundColor(Color.GREEN);
                     //searchVal_e=nodes2.get(i);
                     searchIn_e=path_search.get(i);
-                    showMainActivity(sendJSONString(searchPath(searchIn_s, searchIn_e)));
+
+                    showMainActivity(searchPath(searchIn_s, searchIn_e));
+
                 }
             }
         });
@@ -263,10 +263,13 @@ public class ListActivity extends AppCompatActivity {
         List<HashMap<String, String>> searchHash=new ArrayList<>();
         int start_i, stop_i;
 
+        /*
         if(distaceAB(new LatLng(Double.valueOf(searchL_s.get("lat"))
                 , Double.valueOf(searchL_s.get("lng")))
                 , new LatLng(Double.valueOf(searchL_e.get("lat"))
                         , Double.valueOf(searchL_e.get("lng"))))){
+                        */
+        if(checkAB(searchL_s, searchL_e)){
             start_l=searchL_s;
             stop_l=searchL_e;
         }else{
@@ -278,88 +281,47 @@ public class ListActivity extends AppCompatActivity {
         start_i=path.indexOf(start_l);
         stop_i=path.indexOf(stop_l);
         searchHash=path.subList(start_i,stop_i);
-
+        searchHash.add(path.get(stop_i));   //두번째 선택지 같이 표시하기 위해서
         return searchHash;
     }
 
-    public boolean distaceAB(LatLng l1, LatLng l2){
-        float dis1, dis2;
-        boolean flowCk;
+    public boolean checkAB(HashMap<String, String> startH, HashMap<String, String> stopH){
+        int start;
+        int stop;
+        boolean check;
 
-        Location loc_s= new Location("point_s");
-        loc_s.setLatitude(Double.valueOf(path.get(0).get("lat")));
-        loc_s.setLongitude(Double.valueOf(path.get(0).get("lng")));
+        start=Integer.valueOf(startH.get("index"));
+        stop=Integer.valueOf(stopH.get("index"));
 
-        Location loc_1= new Location("point_s");
-        loc_1.setLatitude(l1.latitude);
-        loc_1.setLongitude(l1.longitude);
 
-        Location loc_2= new Location("point_s");
-        loc_2.setLatitude(l2.latitude);
-        loc_2.setLongitude(l2.longitude);
+        if(start<stop){
+            check=true;
+        }else{
+            check = false;
+        }
 
-        dis1=loc_s.distanceTo(loc_1);
-        dis2=loc_s.distanceTo(loc_2);
-
-        if(dis1<dis2){
-            flowCk=true;
-        }else
-            flowCk=false;
-
-        return flowCk;
+        return check;
     }
 
-    public void showMainActivity(String sendJSON){
+   
+    public void showMainActivity(List<HashMap<String, String>> list){
         Intent intent=new Intent(getApplicationContext(), MainActivity.class);
-        intent.putExtra("list",sendJSON);
+        
+        SearchNodes searchNods= new SearchNodes(list);
+        intent.putExtra("path",searchNods);
+
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
-    //public String sendJSONString(Vector<Vector<Vector<LatLng>>> searchPath){
-    public String sendJSONString(List<HashMap<String,String>> searchPath){
-
-        String sendString="{\"routes\":[";
-
-
-            sendString+="{";
-
-            sendString+="\"legs\":[";
-
-                sendString+="{";
-
-                sendString+="\"steps\":[";
-                for(int i=0; i<searchPath.size();i++){//point
-                    if(i==0) sendString+="{";
-                    else sendString+=",{";
-                    sendString+="\"lat\":\""+searchPath.get(i).get("lat")
-                            +"\",\"lng\":\""+searchPath.get(i).get("lng")
-                            +"\"}";
-                }
-                sendString+="]}";
-
-            sendString+="]}";
-
-        sendString+="]}";
-
-        System.out.println("test005 : "+sendString);
-
-
-        return sendString;
-    }
-
-    public void saveLog2(String data){
+    public void saveLog(String data){
         if (!checkExternalStorage()) return;
         // 외부메모리를 사용하지 못하면 끝냄
-
-
-        String log_data = data;
-
 
         String path = Environment.getExternalStorageDirectory().getAbsolutePath();
         path += "/MyDir";
         try {
-            File f = new File(path, "log.txt"); // 경로, 파일명
+            File f = new File(path, "log_hashmap.txt"); // 경로, 파일명
 
             FileWriter write = new FileWriter(f, true);
 
@@ -374,12 +336,6 @@ public class ListActivity extends AppCompatActivity {
     boolean checkExternalStorage() {
         String state;
         state = Environment.getExternalStorageState();
-
-        String path= Environment.getExternalStorageDirectory().toString();
-        String dirPath = getFilesDir().getAbsolutePath();
-        System.out.println("test000_1: "+path);
-        System.out.println("test000_1: "+dirPath);
-
 
         // 외부메모리 상태
         if (Environment.MEDIA_MOUNTED.equals(state)) {

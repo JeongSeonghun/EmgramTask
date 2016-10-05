@@ -50,6 +50,7 @@ public class DirectionsJSONParser {
                 //Vector<LatLng> path= new Vector<LatLng>();
                 //Vector<Vector<LatLng>> search_leg= new Vector();
 
+                int index=0;
                 /** Traversing all legs */
                 //경유지 지정할 경우 legs는 2이상일수도 있음
                 for(int j=0;j<jLegs.length();j++){  //leg배열 객체 전체 확인
@@ -79,7 +80,9 @@ public class DirectionsJSONParser {
                             hm.put("lng", Double.toString(((LatLng)list.get(l)).longitude) );
                             hm.put("leg", String.valueOf(j+1) );
                             hm.put("step", String.valueOf(k+1) );
+                            hm.put("index", String.valueOf(index));
                             path.add(hm);
+                            index+=1;
 
                         }
 
