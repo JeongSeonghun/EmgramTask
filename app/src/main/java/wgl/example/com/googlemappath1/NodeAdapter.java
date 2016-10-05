@@ -8,24 +8,18 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.google.android.gms.maps.model.LatLng;
-
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
 
 public class NodeAdapter extends BaseAdapter {
     Context context;
-    //Vector<LatLng> al= new Vector();
     List<HashMap<String,String>> al;
     int layout;
-
     int clickNum;
-    int indexCk;
+    int indexChk;
 
     LayoutInflater inf;// xml에 정의된 자원(resource)들을 view로 반환
 
-    //public NodeAdapter(Context context, int layout, Vector<LatLng> al){
     public NodeAdapter(Context context, int layout, List<HashMap<String,String>> al){
         this.context= context;
         this.layout= layout;
@@ -65,9 +59,12 @@ public class NodeAdapter extends BaseAdapter {
         num.setText(String.valueOf(i+1));
         value.setText(al.get(i).get("lat")+"/"+al.get(i).get("lng"));
 
-        if(indexCk==i&&clickNum==1){
+        //클릭에 따른 listItem 색변화
+        if(indexChk==i&&clickNum==1){
             view.setBackgroundColor(Color.CYAN);
-        }else{
+        }else if(indexChk==i&&clickNum==2){
+            view.setBackgroundColor(Color.GREEN);
+        }else{  //뷰 재사용에 따른 추가 색 방지
             view.setBackgroundColor(Color.WHITE);
         }
 
@@ -77,8 +74,8 @@ public class NodeAdapter extends BaseAdapter {
     public void setClickNum(int clickNum){
         this.clickNum=clickNum;
     }
-    public void setIndexCk(int indexCk){
-        this.indexCk=indexCk;
+    public void setIndexChk(int indexChk){
+        this.indexChk=indexChk;
     }
 
     /*

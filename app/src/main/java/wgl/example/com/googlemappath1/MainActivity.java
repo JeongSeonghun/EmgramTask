@@ -3,17 +3,13 @@ package wgl.example.com.googlemappath1;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-//import android.location.Location;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-//import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,39 +28,33 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener
         ,GoogleMap.OnMapClickListener{
+
     private GoogleMap map;
-    Button pathBt, resetBt;
-    TextView startTxt, stopTxt;
     Marker startMark, stopMark;
-    boolean sMarkAdd=true, eMarkAdd=true; //마커 표시 여부
+
     SupportMapFragment mapfrag;
+
+    Button pathBt, resetBt;
     Button listShow;
-    boolean rePolyCheck=true;  //경로 개수 확인
-    RadioButton startR, stopR;
-
-    String list_val="";    //intent전달용 json값
-
-    long now;
-    Date date;
-    SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
-
-    int rePolyNum=0;
-
     Button logShow;
-    String logSt;
+    RadioButton startRadio, stopRadio;
+    TextView startTxt, stopTxt;
+
+    boolean startMarkCheck=true, stopMarkCheck=true; //마커 표시 여부
+    boolean rePolyCheck=true;  //경로 polyline 표시 여부
+    int searchNum=1;    //부분 검색 경로 polyline 횟수 확인
+
+    List<HashMap<String, String>> path;
+
+    LogSave logSave=new LogSave();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,19 +67,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         startTxt= (TextView)findViewById(R.id.start_t);
         stopTxt= (TextView)findViewById(R.id.stop_t);
 
-        startR= (RadioButton)findViewById(R.id.start_r);
-        stopR= (RadioButton)findViewById(R.id.stop_r);
+        startRadio= (RadioButton)findViewById(R.id.start_r);
+        stopRadio= (RadioButton)findViewById(R.id.stop_r);
 
         mapfrag= ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map));
         mapfrag.getMapAsync(this);
 
+        
         pathBt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
                 NodeWgs nodeWgs= new NodeWgs();
-                //nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&key=AIzaSyCc2PqOCbvrNGtDRwINl4X_tiywxt9TDPA\n");
-                //nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?origin=-33.866,151.195&destination=-33.866,148.195&key=AIzaSyCc2PqOCbvrNGtDRwINl4X_tiywxt9TDPA");
 
+                logSave.save("path Click");
+                
                 if(rePolyCheck){
                     nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?"
                             +"origin="+startTxt.getText().toString()
@@ -98,25 +89,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }else{
                     Toast.makeText(getApplicationContext(),"Reset버튼을 눌러주세요.", Toast.LENGTH_SHORT).show();
                 }
-
-                now= System.currentTimeMillis();
-                date= new Date(now);
-                String timeLog=sim.format(date);
-                logSt=timeLog+":"+"path Click\n";
-
-
+                rePolyCheck=false;
             }
         });
 
         resetBt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
+                logSave.save("reset Click");
                 map.clear();
-                sMarkAdd=true;
-                eMarkAdd=true;
+                startMarkCheck=true;
+                stopMarkCheck=true;
                 rePolyCheck=true;
-                rePolyNum=0;
-                list_val="";
+                searchNum=1;
+                path.clear();
                 startTxt.setText("");
                 stopTxt.setText("");
             }
@@ -128,16 +114,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onClick(View view) {
                 Intent intent= new Intent(getApplicationContext(), ListActivity.class);
 
-                now= System.currentTimeMillis();
-                date= new Date(now);
-                String timeLog=sim.format(date);
-                String log="";
-
-                log+=timeLog+":"+"list click";
-                saveLog(log);
-
-                if(rePolyNum<3){
-                    intent.putExtra("list",list_val);
+                logSave.save("list click");
+                
+                if(searchNum<=3){
+                    SendNodes sendNodes= new SendNodes(path);
+                    intent.putExtra("list",sendNodes);
                     startActivity(intent);
                 }else{
                     Toast.makeText(getApplicationContext(),"3번까지로 제한됩니다. reset을 눌러주세요.", Toast.LENGTH_SHORT).show();
@@ -154,8 +135,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        //외부저장소 권한 확인
         checkDangerousPermissions();
-        addFile();
+        
+        //log저장 준비
+        logSave.addFile(getApplicationContext(), "MyDir", "log_hashmap");
 
     }
 
@@ -165,18 +149,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         List<HashMap<String,String>> searchPath;
 
-        SearchNodes searchNodes=(SearchNodes)intent.getParcelableExtra("path");
-        searchPath= searchNodes.getSearchList();
+        SendNodes sendNodes =(SendNodes)intent.getParcelableExtra("path");
+        searchPath= sendNodes.getSendList();
         addPolyline(searchPath, false);
 
-        now= System.currentTimeMillis();
-        date= new Date(now);
-        String timeLog=sim.format(date);
-        String log="";
-
-        log+=timeLog+":"+"search poly line end";
-        saveLog(log);
-
+        logSave.save("search polyline end");
+        
     }
 
     @Override
@@ -184,9 +162,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         map = googleMap;
         map.setOnMarkerClickListener(this);
         map.setOnMapClickListener(this);
-
-       //LatLng seul= new LatLng(37.4632016047, 126.9345984302);
-        LatLng la= new LatLng(34.052, -118.246);
+        
+        LatLng la= new LatLng(34.052, -118.246);    //로스앤젤레스
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(la, 10));
 
     }
@@ -197,7 +174,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return false;
     }
 
-    //google 서비스
+    //google 서비스, 경로 JSON
     private class NodeWgs extends AsyncTask<String, Integer,String> {
         @Override
         protected String doInBackground(String... urls) {
@@ -239,38 +216,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         protected void onPostExecute(String str) {
 
-            List<HashMap<String, String>> path;
-            String pathCk_s;    //경로 데이터 확인
+
+            String pathChk_str;    //경로 데이터 확인
             try {
                 JSONObject gDirectJo = new JSONObject(str);
-
-                pathCk_s=gDirectJo.getString("status"); //길찾기 응답요소, 상태코드 참고
-
+                
                 //경로 얻기
                 DirectionsJSONParser parser = new DirectionsJSONParser();
                 path=parser.parse(gDirectJo);
-
-                if(rePolyCheck)  //세가지 경로 중 처음 경로만 저장
-                list_val=gDirectJo.toString();
-
-                if(pathCk(pathCk_s)) {
+                                
+                pathChk_str=gDirectJo.getString("status"); //길찾기 응답요소, 상태코드 참고
+                if(pathCk(pathChk_str)) {
                     addPolyline(path, true);
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
-
-                    log+=logSt+timeLog+":"+"poly line end";
-                    saveLog(log);
+                    logSave.save("path polyline end");
+                    
                 }else {
-                    Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
-
-                    log+=logSt+timeLog+":"+"poly line end,false";
-                    saveLog(log);
+                    Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathChk_str, Toast.LENGTH_SHORT).show();
+                    logSave.save("path polyline false");
                 }
 
             } catch (JSONException e) {
@@ -299,144 +261,68 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    //polyline 그리기
-    public void addPolyline(List<HashMap<String, String>> node, boolean seachCk){
+    //polyline 그리기, searchChk: true-전체경로 표시, false- 부분 검색 경로 표시
+    public void addPolyline(List<HashMap<String, String>> node, boolean searchChk){
 
         PolylineOptions poly= new PolylineOptions().geodesic(true);
-        int[] width={3,10};
-        int[] polColor={Color.RED, Color.BLUE};//횟수에 따른 경로 색 변경용
+        int[] width={3,10,8,6};
+        int[] polColor={Color.RED, Color.BLUE, Color.CYAN, Color.GREEN};
         int setNum;
+        int colorNum;
 
-        if(seachCk)
+        //전체경로와 부분검색경로 구분용, 0:전체경로, 1~3:부분경로
+        if(searchChk){
             setNum=0;
-        else{
-            setNum=1;
-            rePolyNum+=1;
+            colorNum=0;
+        }else{
+            setNum=searchNum;
+            colorNum=searchNum;
+            searchNum+=1;
         }
 
         for(int i=0; i<node.size(); i++){
             poly.add(new LatLng(Double.valueOf(node.get(i).get("lat")),
                     Double.valueOf(node.get(i).get("lng"))));
             poly.width(width[setNum]);
-            poly.color(polColor[setNum]);
+            poly.color(polColor[colorNum]);
         }
 
         map.addPolyline(poly);
-
-        rePolyCheck=false;
 
     }
 
 
     @Override
     public void onMapClick(LatLng latLng) {
-        now= System.currentTimeMillis();
-        date= new Date(now);
-        String timeLog=sim.format(date);
-        String log="";
 
-        if(startR.isChecked()){   //start 선택시
-            if(sMarkAdd){   //start Marker 존제 여부 확인 후 추가
+        if(startRadio.isChecked()){   //start 선택시
+            if(startMarkCheck){   //start Marker 존제 여부 확인 후 추가
                 startMark=map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .icon(BitmapDescriptorFactory.defaultMarker(30)));
-                sMarkAdd=false;
+                        .icon(BitmapDescriptorFactory.defaultMarker(30)));//마커색
+                startMarkCheck=false;
             }else{  //start Marker 위치 변경
                 startMark.setPosition(latLng);
             }
 
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Start Click";
-            saveLog(log);
+            logSave.save("start location click");
         }
 
-        if(stopR.isChecked()){  //stop선택시
-            if(eMarkAdd){
+        if(stopRadio.isChecked()){  //stop선택시
+            if(stopMarkCheck){
                 stopMark=map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .icon(BitmapDescriptorFactory.defaultMarker(90)));
-                eMarkAdd=false;
+                        .icon(BitmapDescriptorFactory.defaultMarker(90)));//마커색
+                stopMarkCheck=false;
             }else{
                 stopMark.setPosition(latLng);
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Stop Click";
-            saveLog(log);
+            logSave.save("stop location click");
         }
 
-    }
-
-    public void saveLog(String data){
-        if (!checkExternalStorage()) return;
-        // 외부메모리를 사용하지 못하면 끝냄
-
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-        path += "/MyDir";
-        try {
-            File f = new File(path, "log_hashmap.txt"); // 경로, 파일명
-
-            FileWriter write = new FileWriter(f, true);
-
-            write.append(data+"\n");
-            write.close();
-            System.out.println("저장완료");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void addFile(){
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-        path += "/MyDir";
-        File file = new File(path);
-        if(file.exists()){
-            Toast.makeText(getApplicationContext(),"폴더 존제", Toast.LENGTH_SHORT);
-            System.out.println("폴더존제");
-        }else{
-            file.mkdirs();
-            System.out.println("폴더 생성");
-        }
-
-        String sdPath=path+"/log_hashmap.txt";
-        file = new File(sdPath);
-        try {
-            if(file.exists()){
-                Toast.makeText(getApplicationContext(),"파일 존제", Toast.LENGTH_SHORT);
-                System.out.println("파일 존제");
-
-            }else{
-                file.createNewFile();
-                Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
-            }
-
-        } catch(IOException ie){
-            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    boolean checkExternalStorage() {
-        String state;
-        state = Environment.getExternalStorageState();
-
-        // 외부메모리 상태
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            // 읽기 쓰기 모두 가능
-            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
-            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
-            return true;
-        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
-            //읽기전용
-            Log.d("test0", "외부메모리 읽기만 가능");
-            System.out.println("test000: 외부메모리 읽기만 가능");
-            return false;
-        } else {
-            // 읽기쓰기 모두 안됨
-            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
-            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
-
-            return false;
-        }
     }
 
     //권한 확인
@@ -460,7 +346,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "권한 없음", Toast.LENGTH_LONG).show();
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
-                Toast.makeText(this, "권한 설명 필요함.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "log 텍스트 저장.", Toast.LENGTH_LONG).show();
             } else {
                 ActivityCompat.requestPermissions(this, permissions, 1);
             }
