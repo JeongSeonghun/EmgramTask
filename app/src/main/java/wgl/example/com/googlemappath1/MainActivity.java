@@ -1,20 +1,16 @@
 package wgl.example.com.googlemappath1;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 //import android.location.Location;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 //import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -34,39 +30,29 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener
         ,GoogleMap.OnMapClickListener{
     private GoogleMap map;
-    Button pathBt, resetBt;
-    TextView startTxt, stopTxt;
     Marker startMark, stopMark;
-    boolean sMarkAdd=true, eMarkAdd=true; //마커 표시 여부
     SupportMapFragment mapfrag;
+    
+    TextView startTxt, stopTxt;
+    Button pathBt, resetBt;
     Button listShow;
-    boolean rePolyCheck=true;  //경로 개수 확인
-    RadioButton startR, stopR;
-
-    String list_val="";    //intent전달용 json값
-
-    long now;
-    Date date;
-    SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
-
-    int rePolyNum=0;
-
     Button logShow;
-    String logSt, logSp;
+    RadioButton startR, stopR;
+    
+    boolean startMark_chk=true, stopMark_chk=true; //마커 표시 여부
+    boolean rePolyCheck=true;  //경로 polyline 확인
+    String list_val="";    //intent전달용 json값
+    int searchPolyNum=1;    //부분 검색 polyline 횟수 확인
+    
+    LogSave logSave= new LogSave();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,9 +74,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pathBt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
+                logSave.save("path click");
                 NodeWgs nodeWgs= new NodeWgs();
-                //nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&key=AIzaSyCc2PqOCbvrNGtDRwINl4X_tiywxt9TDPA\n");
-                //nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?origin=-33.866,151.195&destination=-33.866,148.195&key=AIzaSyCc2PqOCbvrNGtDRwINl4X_tiywxt9TDPA");
 
                 if(rePolyCheck){
                     nodeWgs.execute("https://maps.googleapis.com/maps/api/directions/json?"
@@ -101,21 +86,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Toast.makeText(getApplicationContext(),"Reset버튼을 눌러주세요.", Toast.LENGTH_SHORT).show();
                 }
 
-                now= System.currentTimeMillis();
-                date= new Date(now);
-                String timeLog=sim.format(date);
-                logSt=timeLog+":"+"path Click\n";
             }
         });
 
         resetBt.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
+                logSave.save("reset click");
                 map.clear();
-                sMarkAdd=true;
-                eMarkAdd=true;
+                startMark_chk=true;
+                stopMark_chk=true;
                 rePolyCheck=true;
-                rePolyNum=0;
+                searchPolyNum=1;
                 list_val="";
                 startTxt.setText("");
                 stopTxt.setText("");
@@ -128,15 +110,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onClick(View view) {
                 Intent intent= new Intent(getApplicationContext(), ListActivity.class);
 
-                now= System.currentTimeMillis();
-                date= new Date(now);
-                String timeLog=sim.format(date);
-                String log="";
+                logSave.save("list click");
 
-                log+=timeLog+":"+"list click";
-                saveLog(log);
-
-                if(rePolyNum<3){
+                if(searchPolyNum<4){
                     intent.putExtra("list",list_val);
                     startActivity(intent);
                 }else{
@@ -154,28 +130,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        //권한 체크
         checkDangerousPermissions();
+        //파일 생성 및 확인
+        logSave.addFile(getApplicationContext(),"MyDir","log_vector");
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         Vector<Vector<Vector<LatLng>>> searchPath;
+        
         try {
-            JSONObject gDirectJo = new JSONObject(intent.getStringExtra("list"));
+            JSONObject gMapSearchJo = new JSONObject(intent.getStringExtra("list"));
 
-            DirectionsJSONParser2 parser2= new DirectionsJSONParser2();
-            searchPath=parser2.parse(gDirectJo);
+            SearchJSONParser searchParser= new SearchJSONParser();
+            searchPath=searchParser.parse(gMapSearchJo);
 
             addPolyline(searchPath, false);
 
-            now= System.currentTimeMillis();
-            date= new Date(now);
-            String timeLog=sim.format(date);
-            String log="";
-
-            log+=timeLog+":"+"search poly line end";
-            saveLog(log);
+            logSave.save("search polyline end");
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -189,8 +163,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         map.setOnMarkerClickListener(this);
         map.setOnMapClickListener(this);
 
-       //LatLng seul= new LatLng(37.4632016047, 126.9345984302);
-        LatLng la= new LatLng(34.052, -118.246);
+        LatLng la= new LatLng(34.052, -118.246);    //로스앤젤레스
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(la, 10));
 
     }
@@ -209,28 +182,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             try {
 
                 // 연결 url 설정
-                URL url2 = new URL(urls[0]);
+                URL url = new URL(urls[0]);
                 // 커넥션 객체 생성
-                HttpURLConnection conn2 = (HttpURLConnection) url2.openConnection();
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 // 연결되었으면.
-                if (conn2 != null) {
-                    conn2.setConnectTimeout(10000);//최대 연결시간(10초)
-                    conn2.setUseCaches(false);
+                if (conn != null) {
+                    conn.setConnectTimeout(10000);//최대 연결시간(10초)
+                    conn.setUseCaches(false);
                     // 연결되었음 코드가 리턴되면.
 
-                    if (conn2.getResponseCode() == HttpURLConnection.HTTP_OK) {//url주소 사이에 띄어쓰기 존제시 다른코드 반환됨
+                    if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {//url주소 사이에 띄어쓰기 존제시 다른코드 반환됨
 
-                        BufferedReader br2 = new BufferedReader(new InputStreamReader(conn2.getInputStream()));
+                        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                         for (; ; ) {
                             // 웹상에 보여지는 텍스트를 라인단위로 읽어 저장.
-                            String line = br2.readLine();
+                            String line = br.readLine();
                             if (line == null) break;
                             // 저장된 텍스트 라인을 jsonHtml에 붙여넣음
                             jsonHtml.append(line );
                         }
-                        br2.close();
+                        br.close();
                     }
-                    conn2.disconnect();
+                    conn.disconnect();
                 }
 
             } catch (Exception ex) {
@@ -243,50 +216,40 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         protected void onPostExecute(String str) {
 
-            Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
-            String pathCk_s;    //경로 데이터 확인
+            Vector<Vector<Vector<LatLng>>> nodeVec;
+            String pathChk_s;    //경로 데이터 확인
             try {
                 JSONObject gDirectJo = new JSONObject(str);
 
-                pathCk_s=gDirectJo.getString("status"); //길찾기 응답요소, 상태코드 참고
+                pathChk_s=gDirectJo.getString("status"); //길찾기 응답요소, 상태코드 참고
 
                 //경로 얻기
                 DirectionsJSONParser parser = new DirectionsJSONParser();
                 nodeVec=parser.parse(gDirectJo);
 
-                if(rePolyCheck)  //세가지 경로 중 처음 경로만 저장
-                list_val=gDirectJo.toString();
+                if(rePolyCheck){
+                    list_val=gDirectJo.toString();
+                    rePolyCheck=false;
+                }
 
-                if(pathCk(pathCk_s)) {
+                if(pathChk(pathChk_s)) {
                     addPolyline(nodeVec, true);
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
+                    logSave.save("path polyline end");
 
-                    log+=logSt+timeLog+":"+"poly line end";
-                    saveLog(log);
                 }else {
-                    Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathCk_s, Toast.LENGTH_SHORT).show();
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
+                    Toast.makeText(getApplicationContext(), "지원되지 않아요!:" + pathChk_s, Toast.LENGTH_SHORT).show();
+                    logSave.save("path polyline false");
 
-                    log+=logSt+timeLog+":"+"poly line end,false";
-                    saveLog(log);
                 }
 
             } catch (JSONException e) {
-
                 e.printStackTrace();
-
             }
 
         }
 
         //경로결과 확인
-        public boolean pathCk(String checkStr){
+        public boolean pathChk(String checkStr){
             boolean check;
             //경로 결과가 없을시 status는 OK가 아닌 다른 값을 보임
             if(checkStr.equals("OK"))
@@ -304,156 +267,72 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     //polyline 그리기
-    public void addPolyline(Vector<Vector<Vector<LatLng>>> node, boolean seachCk){
+    private void addPolyline(Vector<Vector<Vector<LatLng>>> node, boolean seachCk){
 
         PolylineOptions poly= new PolylineOptions().geodesic(true);
-        int[] width={3,10};
-        int[] polColor={Color.RED, Color.BLUE};//횟수에 따른 경로 색 변경용
+        int[] width={3,10, 7, 4};
+        int[] polColor={Color.RED, Color.BLUE, Color.CYAN, Color.GREEN};
+        //횟수에 따른 경로 색, 두깨 변경용
         int setNum;
+        int colorNum;
 
-        if(seachCk)
+        if(seachCk){
             setNum=0;
-        else{
-            setNum=1;
-            rePolyNum+=1;
+            colorNum=0;
+        }else{
+            setNum=searchPolyNum;
+            colorNum=searchPolyNum;
+            searchPolyNum+=1;
         }
 
         for(int i=0; i<node.size(); i++){
             for(int j=0; j<node.get(i).size(); j++){
                 poly.addAll(node.get(i).get(j));
                 poly.width(width[setNum]);
-                poly.color(polColor[setNum]);
+                poly.color(polColor[colorNum]);
             }
         }
 
         map.addPolyline(poly);
-
-        rePolyCheck=false;
 
     }
 
 
     @Override
     public void onMapClick(LatLng latLng) {
-        now= System.currentTimeMillis();
-        date= new Date(now);
-        String timeLog=sim.format(date);
-        String log="";
 
         if(startR.isChecked()){   //start 선택시
-            if(sMarkAdd){   //start Marker 존제 여부 확인 후 추가
+            if(startMark_chk){   //start Marker 존제 여부 확인 후 추가
                 startMark=map.addMarker(new MarkerOptions()
                         .position(latLng)
                         .icon(BitmapDescriptorFactory.defaultMarker(30)));
-                sMarkAdd=false;
+                startMark_chk=false;
             }else{  //start Marker 위치 변경
                 startMark.setPosition(latLng);
             }
 
             //start 좌표 표시 "latitude,longitude"
             startTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Start Click";
-            saveLog(log);
+
+            logSave.save("start mark click");
         }
 
         if(stopR.isChecked()){  //stop선택시
-            if(eMarkAdd){
+            if(stopMark_chk){
                 stopMark=map.addMarker(new MarkerOptions()
                         .position(latLng)
                         .icon(BitmapDescriptorFactory.defaultMarker(90)));
-                eMarkAdd=false;
+                stopMark_chk=false;
             }else{
                 stopMark.setPosition(latLng);
             }
             stopTxt.setText(latLng.latitude+","+latLng.longitude);
-            log+=timeLog+":"+"Stop Click";
-            saveLog(log);
+
+            logSave.save("stop mark click");
         }
 
     }
 
-
-    public void saveLog(String data){
-        if (!checkExternalStorage()) return;
-        // 외부메모리를 사용하지 못하면 끝냄
-
-
-        String log_data = data;
-
-
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-        path += "/MyDir";
-        try {
-            File f = new File(path, "log_vector.txt"); // 경로, 파일명
-
-            FileWriter write = new FileWriter(f, true);
-
-            write.append(data+"\n");
-            write.close();
-            System.out.println("저장완료");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void addFile(){
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-        path += "/MyDir";
-        File file = new File(path);
-        if(file.exists()){
-            Toast.makeText(getApplicationContext(),"폴더 존제", Toast.LENGTH_SHORT);
-            System.out.println("폴더존제");
-        }else{
-            file.mkdirs();
-            System.out.println("폴더 생성");
-        }
-
-        String sdPath=path+"/log_vector.txt";
-        file = new File(sdPath);
-        try {
-            if(file.exists()){
-                Toast.makeText(getApplicationContext(),"파일 존제", Toast.LENGTH_SHORT);
-                System.out.println("파일 존제");
-
-            }else{
-                file.createNewFile();
-                Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 성공~", Toast.LENGTH_SHORT).show();
-            }
-
-        } catch(IOException ie){
-            Toast.makeText(getApplicationContext(), "이미지 디렉토리 및 파일생성 실패", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    boolean checkExternalStorage() {
-        String state;
-        state = Environment.getExternalStorageState();
-
-        String path= Environment.getExternalStorageDirectory().toString();
-        String dirPath = getFilesDir().getAbsolutePath();
-        System.out.println("test000_1: "+path);
-        System.out.println("test000_1: "+dirPath);
-
-
-        // 외부메모리 상태
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            // 읽기 쓰기 모두 가능
-            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
-            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
-            return true;
-        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
-            //읽기전용
-            Log.d("test0", "외부메모리 읽기만 가능");
-            System.out.println("test000: 외부메모리 읽기만 가능");
-            return false;
-        } else {
-            // 읽기쓰기 모두 안됨
-            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
-            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
-
-            return false;
-        }
-    }
 
     //권한 확인
     private void checkDangerousPermissions() {
@@ -476,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Toast.makeText(this, "권한 없음", Toast.LENGTH_LONG).show();
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
-                Toast.makeText(this, "권한 설명 필요함.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "log text 저장.", Toast.LENGTH_LONG).show();
             } else {
                 ActivityCompat.requestPermissions(this, permissions, 1);
             }

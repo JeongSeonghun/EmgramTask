@@ -36,21 +36,20 @@ public class ListActivity extends AppCompatActivity {
     EditText searchleg;
     Button searchBt;
 
+    String pathCk_s="";
+    boolean click_Ck=true;
+
     DirectionsJSONParser parser;
 
-    String pathCk_s="";
-
-    boolean click_Ck=true;
     LatLng searchVal_s, searchVal_e;
 
     Vector<Vector<Vector<LatLng>>> nodeVec= new Vector();
-    Vector<LatLng> nodes2;
+    Vector<LatLng> nodes;
+    Vector<LatLng> allNodes;
 
     NodeAdapter nodeAdapter;
 
-    long now;
-    Date date;
-    SimpleDateFormat sim= new SimpleDateFormat("MM/dd HH:mm:ss.SSS");
+    LogSave logSave= new LogSave();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,20 +68,13 @@ public class ListActivity extends AppCompatActivity {
 
         receive= intent.getStringExtra("list");
 
-
         receiveNodes(receive);
 
         searchBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 int leg_i, step_i;
-                now= System.currentTimeMillis();
-                date= new Date(now);
-                String timeLog=sim.format(date);
-                String log="";
-
-                log+=timeLog+":"+"search click";
-                saveLog(log);
+                logSave.save("search click");
 
                 try{
                     if(searchleg.getText().toString().equals(""))
@@ -103,9 +95,12 @@ public class ListActivity extends AppCompatActivity {
                 }
             }
         });
+
+        logSave.addFile(getApplicationContext(),"MyDir","log_vector");
     }
 
-    public void receiveNodes(String receive){
+    //MainActivity에서 전달 받은 전체 경로 JSON을 Vector로 저장 및 list표시
+    private void receiveNodes(String receive){
 
         try {
             JSONObject gDirectJo = new JSONObject(receive);
@@ -123,19 +118,17 @@ public class ListActivity extends AppCompatActivity {
 
         if(pathCk_s.equals("OK")){
             setList(0,0);
+            allNodes=nodes;
         }
 
     }
 
     //경로 node들 리스트뷰에 표시
-    //public void setList(String receive, int leg_Num, int step_Num){
-    public void setList(int leg_Num, int step_Num){
-        //num: step 인덱스, 0=전체
+    private void setList(int leg_Num, int step_Num){
 
-        nodes2= new Vector();
+        nodes= new Vector();
         String legNum="";
         String stepNum="";
-
 
         if(nodeVec.size()<1){
             legNum+="0";
@@ -157,154 +150,131 @@ public class ListActivity extends AppCompatActivity {
         if(leg_Num==0&&step_Num==0){
             for(int i=0; i<nodeVec.size(); i++){        //i번째 leg의 좌표Vector Vector<Vector<LatLng>>
                 for(int j=0; j<nodeVec.get(i).size(); j++){ //배열의 j번째 LatLng 객체 Vector<LatLng>
-                    nodes2.addAll(nodeVec.get(i).get(j));
+                    nodes.addAll(nodeVec.get(i).get(j));
                 }
             }
 
         }else if(leg_Num>0&&step_Num>=0){
             if(step_Num==0&&leg_Num<=Integer.valueOf(legNum)){
                 for(int i=0; i<nodeVec.get(leg_Num-1).size(); i++){
-                    nodes2.addAll(nodeVec.get(leg_Num-1).get(i));
+                    nodes.addAll(nodeVec.get(leg_Num-1).get(i));
                 }
 
             }else if(leg_Num<=Integer.valueOf(legNum)&&
                     step_Num<=Integer.valueOf(stepNum)&&step_Num>0){
-                nodes2.addAll(nodeVec.get(leg_Num-1).get(step_Num-1));
+                nodes.addAll(nodeVec.get(leg_Num-1).get(step_Num-1));
             }
         }
-        node.setText(String.valueOf(nodes2.size()));
-        //list.setAdapter(new NodeAdapter(getApplicationContext(), R.layout.info, nodes2));
-        nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, nodes2);
+        node.setText(String.valueOf(nodes.size()));
+
+        nodeAdapter= new NodeAdapter(getApplicationContext(), R.layout.info, nodes);
         list.setAdapter(nodeAdapter);
 
-        now= System.currentTimeMillis();
-        date= new Date(now);
-        String timeLog=sim.format(date);
-        String log="";
-
-        log+=timeLog+":"+"list set";
-        saveLog(log);
+        logSave.save("list set");
 
         list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if(click_Ck){
+                    logSave.save("first list item click");
+
                     nodeAdapter.setClickNum(1);
-                    nodeAdapter.setIndexCk(i);
+                    nodeAdapter.setIndexChk(i);
 
                     nodeAdapter.notifyDataSetChanged();
 
-                    searchVal_s=nodes2.get(i);
+                    searchVal_s=nodes.get(i);
                     click_Ck=false;
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
 
-                    log+=timeLog+":"+"first list click";
-                    saveLog(log);
                 }else{
-                    now= System.currentTimeMillis();
-                    date= new Date(now);
-                    String timeLog=sim.format(date);
-                    String log="";
+                    logSave.save("second list item click");
 
-                    log+=timeLog+":"+"second list click";
-                    saveLog(log);
+                    nodeAdapter.setClickNum(2);
+                    nodeAdapter.setIndexChk(i);
 
-                    view.setBackgroundColor(Color.GREEN);
-                    searchVal_e=nodes2.get(i);
+                    searchVal_e=nodes.get(i);
                     showMainActivity(sendJSONString(searchPath(searchVal_s, searchVal_e)));
                 }
             }
         });
     }
 
-    public Vector<Vector<Vector<LatLng>>> searchPath(LatLng searchL_s, LatLng searchL_e){
+    //부분 경로 검색 및 반환
+    private Vector<Vector<Vector<LatLng>>> searchPath(LatLng click_item1, LatLng click_item2){
         Vector<Vector<Vector<LatLng>>> searchVec= new Vector();
-        boolean saveCk=false;
-        boolean stopCk=false;
+        boolean saveChk=false;
+        boolean stopChk=false;
 
         LatLng start_l, stop_l;
 
-        if(distaceAB(searchL_s, searchL_e)){
-            start_l=searchL_s;
-            stop_l=searchL_e;
+        //index 양방향 검색
+        if(checkAB(click_item1, click_item2)){
+            start_l=click_item1;
+            stop_l=click_item2;
         }else{
-            start_l=searchL_e;
-            stop_l=searchL_s;
+            start_l=click_item2;
+            stop_l=click_item1;
         }
 
         for(int i=0; i<nodeVec.size(); i++){
-            Vector<Vector<LatLng>> sLegs= new Vector();
+            Vector<Vector<LatLng>> search_legs= new Vector();
             for(int j=0; j<nodeVec.get(i).size();j++){
-                Vector<LatLng> sSteps= new Vector();
+                Vector<LatLng> search_steps= new Vector();
                 for(int k=0; k<nodeVec.get(i).get(j).size();k++){
                     if(start_l.equals(nodeVec.get(i).get(j).get(k))){
-                        saveCk=true;
+                        saveChk=true;
                     }else if(stop_l.equals(nodeVec.get(i).get(j).get(k))){
-                        saveCk=false;
-                        stopCk=true;
+                        saveChk=false;
+                        stopChk=true;
                     }
-                    if(saveCk){
-                        sSteps.add(nodeVec.get(i).get(j).get(k));
-                    }else if(stopCk){
-                        sSteps.add(nodeVec.get(i).get(j).get(k));
+                    if(saveChk){
+                        search_steps.add(nodeVec.get(i).get(j).get(k));
+                    }else if(stopChk){
+                        search_steps.add(nodeVec.get(i).get(j).get(k));
                         break;
                     }
                 }
-                if(saveCk){
-                    sLegs.add(sSteps);
-                }else if(stopCk){
-                    sLegs.add(sSteps);
+                if(saveChk){
+                    search_legs.add(search_steps);
+                }else if(stopChk){
+                    search_legs.add(search_steps);
                     break;
                 }
             }
-            if(saveCk) {
-                searchVec.add(sLegs);
-            }else if(stopCk){
-                searchVec.add(sLegs);
+            if(saveChk) {
+                searchVec.add(search_legs);
+            }else if(stopChk){
+                searchVec.add(search_legs);
                 break;
             }
         }
         return searchVec;
     }
 
-    public boolean distaceAB(LatLng l1, LatLng l2){
-        float dis1, dis2;
-        boolean flowCk;
-
-        Location loc_s= new Location("point_s");
-        loc_s.setLatitude(nodeVec.get(0).get(0).get(0).latitude);
-        loc_s.setLongitude(nodeVec.get(0).get(0).get(0).longitude);
-
-        Location loc_1= new Location("point_1");
-        loc_1.setLatitude(l1.latitude);
-        loc_1.setLongitude(l1.longitude);
-
-        Location loc_2= new Location("point_2");
-        loc_2.setLatitude(l2.latitude);
-        loc_2.setLongitude(l2.longitude);
-
-        dis1=loc_s.distanceTo(loc_1);
-        dis2=loc_s.distanceTo(loc_2);
-
-        if(dis1<dis2){
-            flowCk=true;
-        }else
-            flowCk=false;
-
-        return flowCk;
+    //클릭 아이템 index비교
+    private boolean checkAB(LatLng l1, LatLng l2){
+        boolean flowChk;
+        int click1_index, click2_index;
+        click1_index=allNodes.indexOf(l1);
+        click2_index=allNodes.indexOf(l2);
+        if(click1_index<click2_index){
+            flowChk=true;
+        }else{
+            flowChk=false;
+        }
+        return flowChk;
     }
 
-    public void showMainActivity(String sendJSON){
+    //MainActivity로 부분 검색 경로 전달
+    private void showMainActivity(String sendJSON){
         Intent intent=new Intent(getApplicationContext(), MainActivity.class);
         intent.putExtra("list",sendJSON);
+
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
-    public String sendJSONString(Vector<Vector<Vector<LatLng>>> searchPath){
+    private String sendJSONString(Vector<Vector<Vector<LatLng>>> searchPath){
         String sendString="{\"routes\":[";
 
         for(int i=0; i<searchPath.size();i++){//legs
@@ -328,62 +298,7 @@ public class ListActivity extends AppCompatActivity {
         }
         sendString+="]}";
 
-        System.out.println("test005 : "+sendString);
-
-
         return sendString;
     }
 
-    public void saveLog(String data){
-        if (!checkExternalStorage()) return;
-        // 외부메모리를 사용하지 못하면 끝냄
-
-
-        String log_data = data;
-
-
-        String path = Environment.getExternalStorageDirectory().getAbsolutePath();
-        path += "/MyDir";
-        try {
-            File f = new File(path, "log_vector.txt"); // 경로, 파일명
-
-            FileWriter write = new FileWriter(f, true);
-
-            write.append(data+"\n");
-            write.close();
-            System.out.println("저장완료");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    boolean checkExternalStorage() {
-        String state;
-        state = Environment.getExternalStorageState();
-
-        String path= Environment.getExternalStorageDirectory().toString();
-        String dirPath = getFilesDir().getAbsolutePath();
-        System.out.println("test000_1: "+path);
-        System.out.println("test000_1: "+dirPath);
-
-
-        // 외부메모리 상태
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            // 읽기 쓰기 모두 가능
-            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
-            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
-            return true;
-        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
-            //읽기전용
-            Log.d("test0", "외부메모리 읽기만 가능");
-            System.out.println("test000: 외부메모리 읽기만 가능");
-            return false;
-        } else {
-            // 읽기쓰기 모두 안됨
-            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
-            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
-
-            return false;
-        }
-    }
 }

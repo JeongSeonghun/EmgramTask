@@ -24,9 +24,8 @@ public class LogActivity extends AppCompatActivity {
         roadLog();
     }
 
+    //로그 읽기용
     public void roadLog(){
-        if (!checkExternalStorage()) return;
-        // 외부메모리를 사용하지 못하면 끝냄
 
         try {
             StringBuffer data = new StringBuffer();
@@ -44,36 +43,6 @@ public class LogActivity extends AppCompatActivity {
             buffer.close();
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    boolean checkExternalStorage() {
-        String state;
-        state = Environment.getExternalStorageState();
-
-        String path= Environment.getExternalStorageDirectory().toString();
-        String dirPath = getFilesDir().getAbsolutePath();
-        System.out.println("test000_1: "+path);
-        System.out.println("test000_1: "+dirPath);
-
-
-        // 외부메모리 상태
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            // 읽기 쓰기 모두 가능
-            Log.d("test0", "외부메모리 읽기 쓰기 모두 가능");
-            System.out.println("test000: 외부메모리 읽기 쓰기 모두 가능");
-            return true;
-        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
-            //읽기전용
-            Log.d("test0", "외부메모리 읽기만 가능");
-            System.out.println("test000: 외부메모리 읽기만 가능");
-            return false;
-        } else {
-            // 읽기쓰기 모두 안됨
-            Log.d("test0", "외부메모리 읽기쓰기 모두 안됨 : "+ state);
-            System.out.println("test000: 외부메모리 읽기쓰기 모두 안됨: "+state);
-
-            return false;
         }
     }
 

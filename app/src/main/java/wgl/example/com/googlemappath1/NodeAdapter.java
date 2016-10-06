@@ -18,7 +18,7 @@ public class NodeAdapter extends BaseAdapter {
     int layout;
 
     int clickNum;
-    int indexCk;
+    int indexChk;
 
     LayoutInflater inf;// xml에 정의된 자원(resource)들을 view로 반환
 
@@ -61,8 +61,11 @@ public class NodeAdapter extends BaseAdapter {
         num.setText(String.valueOf(i+1));
         value.setText(al.get(i).toString());
 
-        if(indexCk==i&&clickNum==1){
+        //아이템 선택에 따른 색표시
+        if(indexChk==i&&clickNum==1){
             view.setBackgroundColor(Color.CYAN);
+        }else if(indexChk==i&&clickNum==2){
+            view.setBackgroundColor(Color.GREEN);
         }else{
             view.setBackgroundColor(Color.WHITE);
         }
@@ -73,8 +76,8 @@ public class NodeAdapter extends BaseAdapter {
     public void setClickNum(int clickNum){
         this.clickNum=clickNum;
     }
-    public void setIndexCk(int indexCk){
-        this.indexCk=indexCk;
+    public void setIndexChk(int indexChk){
+        this.indexChk=indexChk;
     }
 
     /*
