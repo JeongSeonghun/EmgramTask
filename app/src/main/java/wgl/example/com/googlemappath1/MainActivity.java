@@ -126,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
             //calendar envents 테이블 uri
             Uri uri = CalendarContract.Events.CONTENT_URI;
             //where 조건문
-            String selection = "(" + CalendarContract.Events.ORGANIZER + " = ?)";
+            String selection = "(" + CalendarContract.Events.ACCOUNT_NAME + " = ?)";
             //where 조건문 ?에 해당하는 value
             String[] selectionArgs = new String[1];
             //찾아볼 column
@@ -189,8 +189,8 @@ public class MainActivity extends AppCompatActivity {
                                 txtV+=String.valueOf(c.getLong(c.getColumnIndex(CalendarContract.Events._ID)))+" / ";
                                 txtV+=c.getString(c.getColumnIndex(CalendarContract.Events.TITLE))+" / ";
                                 txtV+=String.valueOf(c.getLong(c.getColumnIndex(CalendarContract.Events.DTSTART)))+" / ";
-                                txtV+=c.getString(c.getColumnIndex(CalendarContract.Events.ORGANIZER))+"\n";
-
+                                //txtV+=c.getString(c.getColumnIndex(CalendarContract.Events.ORGANIZER))+"\n";
+                                txtV+=c.getString(c.getColumnIndex(CalendarContract.Events.ACCOUNT_NAME))+"\n";
 
                             } while (c.moveToNext());
                         }
