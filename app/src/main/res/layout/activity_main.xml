@@ -74,6 +74,15 @@
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="test"
+        android:id="@+id/button"
+        android:layout_below="@+id/stop_t"
+        android:layout_toEndOf="@+id/reset" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="list"
         android:id="@+id/list_show"
         android:layout_below="@+id/stop_t"

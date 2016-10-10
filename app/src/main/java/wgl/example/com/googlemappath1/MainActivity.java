@@ -134,6 +134,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         checkDangerousPermissions();
         //파일 생성 및 확인
         logSave.addFile(getApplicationContext(),"MyDir","log_vector");
+        Button testBt=(Button)findViewById(R.id.button);
+        testBt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent= new Intent(getApplicationContext(), Main3Activity.class);
+                startActivity(intent);
+            }
+        });
     }
 
     @Override
