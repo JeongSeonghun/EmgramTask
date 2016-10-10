@@ -7,103 +7,39 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:id="@+id/container"
     tools:context="wgl.example.com.googlemappath1.MainActivity">
 
-    <RadioGroup
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/radioGroup">
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="start"
-            android:id="@+id/start_r"
-            android:checked="true" />
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="stop"
-            android:id="@+id/stop_r"
-            android:checked="false" />
-    </RadioGroup>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="출발"
-        android:id="@+id/start_t"
-        android:layout_gravity="center_horizontal"
-        android:layout_alignTop="@+id/radioGroup"
-        android:layout_alignStart="@+id/stop_t"
-        android:layout_marginTop="5dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="도착"
-        android:id="@+id/stop_t"
-        android:layout_below="@+id/start_t"
-        android:layout_toEndOf="@+id/radioGroup"
-        android:layout_marginTop="10dp" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="path"
-        android:id="@+id/path"
-        android:layout_below="@+id/stop_t"
-        android:layout_alignParentStart="true" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="reset"
-        android:id="@+id/reset"
-        android:layout_toEndOf="@+id/path"
-        android:layout_marginStart="35dp"
-        android:layout_below="@+id/stop_t" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="test"
-        android:id="@+id/button"
-        android:layout_below="@+id/stop_t"
-        android:layout_toEndOf="@+id/reset" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="list"
-        android:id="@+id/list_show"
-        android:layout_below="@+id/stop_t"
-        android:layout_alignParentEnd="true" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="log"
-        android:id="@+id/log_show"
-        android:layout_below="@+id/stop_t"
-        android:layout_toStartOf="@+id/list_show" />
-
-    <fragment
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/map"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
-        tools:context="wgl.example.com.googlemappath.Main2Activity"
-        android:layout_below="@+id/path"
-        android:layout_alignParentStart="true" />
+        android:layout_height="wrap_content"
+        android:id="@+id/linearLayout">
+
+        <Spinner
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinner"
+            android:layout_alignParentTop="true" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/scrollView"
+        android:layout_gravity="center_vertical"
+        android:layout_below="@+id/linearLayout"
+        android:layout_alignParentStart="true"
+        android:fillViewport="false">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Medium Text"
+            android:id="@+id/calTxt"
+            android:layout_below="@+id/spinner"
+            android:layout_alignParentStart="true" />
+    </ScrollView>
 
 </RelativeLayout>
