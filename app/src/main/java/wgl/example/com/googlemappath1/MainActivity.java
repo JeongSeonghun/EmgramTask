@@ -1,5 +1,6 @@
 package wgl.example.com.googlemappath1;
 
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -30,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     Vector calendarName=new Vector();
     TextView txtview;
+    ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,58 +43,12 @@ public class MainActivity extends AppCompatActivity {
         spinner=(Spinner)findViewById(R.id.spinner);
         checkDangerousPermissions();
 
-        //calendas테이블 uri
-        Uri uri= CalendarContract.Calendars.CONTENT_URI;
-        //collum name
-        String[] calenProj= new String[]{
-                CalendarContract.Calendars.ACCOUNT_NAME,
-                CalendarContract.Calendars.ACCOUNT_TYPE,
-                CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
-                CalendarContract.Calendars._SYNC_ID,    //동기화용
-                CalendarContract.Calendars.VISIBLE, //evnent 표시 여부
-                CalendarContract.Calendars.NAME,    //calendar명
-                CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,   //표시될 calendar명
-                CalendarContract.Calendars.CALENDAR_COLOR
-        };
-        Cursor c=null;
-        try{
-            if(operate)
-                c=getContentResolver().query(uri,calenProj,null,null,null);
-
-            if(c!=null){
-                if(c.moveToFirst()){
-                    calendarName.add("total");
-                    do{
-                        if(!calendarName.contains(c.getString(c.getColumnIndex(calenProj[0]))))
-                            calendarName.add(c.getString(c.getColumnIndex(calenProj[0])));
-                        /*
-                        for(int i=0; i<calenProj.length; i++){
-                            Log.i(calenProj[i],c.getString(c.getColumnIndex(calenProj[i])));
-                        }
-                        */
-                        //column에 따른 값 표시
-                        System.out.println(calenProj[0]+":"+c.getString(c.getColumnIndex(calenProj[0])));
-                        System.out.println(calenProj[1]+":"+c.getString(c.getColumnIndex(calenProj[1])));
-                        System.out.println(calenProj[2]+":"+c.getString(c.getColumnIndex(calenProj[2])));
-                        System.out.println(calenProj[3]+":"+c.getString(c.getColumnIndex(calenProj[3])));
-                        System.out.println(calenProj[4]+":"+c.getString(c.getColumnIndex(calenProj[4])));
-                        System.out.println(calenProj[5]+":"+c.getString(c.getColumnIndex(calenProj[5])));
-                        System.out.println(calenProj[6]+":"+c.getString(c.getColumnIndex(calenProj[6])));
-                        System.out.println(calenProj[7]+":"+c.getString(c.getColumnIndex(calenProj[7])));
-
-
-                    }while(c.moveToNext());
-                }
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
+        calendarName=checkAccount();
         /*
         for(int i=0; i<al.size();i++)
             System.out.println("test001:"+i+":"+(String)al.get(i));
             */
-        ArrayAdapter<String> adapter= new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_spinner_item,
+        adapter= new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_spinner_item,
                 calendarName);
 
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -209,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
 
+            adapter.notifyDataSetChanged();
             txtview.setText(s);
         }
     }
@@ -239,8 +196,8 @@ public class MainActivity extends AppCompatActivity {
 
             //한번이라도 거부한 경우 상세히 설명을 위하여, 최초 false, 이전에 거부시 true
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
-                Toast.makeText(this, "캘린더 접근.", Toast.LENGTH_LONG).show();
-            } else {    //퍼미션 요청 대화창 표시
+                Toast.makeText(this, "캘린더 접근.", Toast.LENGTH_LONG).show();  //권한 설명이 필요한 이유 설명
+            } else {    //퍼미션 요청 대화창 표시, 1~전체 권한 표시 가능
                 ActivityCompat.requestPermissions(this, permissions, 1);//activity, permissions[], requestCode
             }
         }
@@ -251,6 +208,70 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if(grantResults[0]==PackageManager.PERMISSION_GRANTED){
+            
+            Intent intent=new Intent(getApplicationContext(),MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT);
+            startActivity(intent);
+        }
+        if(grantResults[1]==PackageManager.PERMISSION_GRANTED){
+            System.out.println("test000_1");
+
+        }
+    }
+
+    //doINBackground, execute 파라미터 타입/ OnPressUpdate 파라미터/
+    //doInBackground 리턴값
+    private Vector checkAccount(){
+        Vector accountVec= new Vector();
+        //calendas테이블 uri
+        Uri uri= CalendarContract.Calendars.CONTENT_URI;
+        //collum name
+        String[] calenProj= new String[]{
+                CalendarContract.Calendars.ACCOUNT_NAME,
+                CalendarContract.Calendars.ACCOUNT_TYPE,
+                CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+                CalendarContract.Calendars._SYNC_ID,    //동기화용
+                CalendarContract.Calendars.VISIBLE, //evnent 표시 여부
+                CalendarContract.Calendars.NAME,    //calendar명
+                CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,   //표시될 calendar명
+                CalendarContract.Calendars.CALENDAR_COLOR
+        };
+        Cursor c=null;
+        try{
+            if(operate)
+                c=getContentResolver().query(uri,calenProj,null,null,null);
+
+            if(c!=null){
+                if(c.moveToFirst()){
+                    accountVec.add("total");
+                    do{
+                        if(!accountVec.contains(c.getString(c.getColumnIndex(calenProj[0]))))
+                            accountVec.add(c.getString(c.getColumnIndex(calenProj[0])));
+                        /*
+                        for(int i=0; i<calenProj.length; i++){
+                            Log.i(calenProj[i],c.getString(c.getColumnIndex(calenProj[i])));
+                        }
+                        */
+                        //column에 따른 값 표시
+                        System.out.println(calenProj[0]+":"+c.getString(c.getColumnIndex(calenProj[0])));
+                        System.out.println(calenProj[1]+":"+c.getString(c.getColumnIndex(calenProj[1])));
+                        System.out.println(calenProj[2]+":"+c.getString(c.getColumnIndex(calenProj[2])));
+                        System.out.println(calenProj[3]+":"+c.getString(c.getColumnIndex(calenProj[3])));
+                        System.out.println(calenProj[4]+":"+c.getString(c.getColumnIndex(calenProj[4])));
+                        System.out.println(calenProj[5]+":"+c.getString(c.getColumnIndex(calenProj[5])));
+                        System.out.println(calenProj[6]+":"+c.getString(c.getColumnIndex(calenProj[6])));
+                        System.out.println(calenProj[7]+":"+c.getString(c.getColumnIndex(calenProj[7])));
+
+
+                    }while(c.moveToNext());
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return accountVec;
     }
 
 
